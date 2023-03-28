@@ -2,12 +2,12 @@ import bpy
 
 # -- PANELS -- #      
 
-class VTOOLS_PN_boneTools(bpy.types.Panel):
+class VTOOLS_PT_boneTools(bpy.types.Panel):
+    bl_label = "VT - Bone Tools"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_label = "Bone Tools"
-    bl_category = 'Rig vTools'
-    #bl_parent_id = "VTOOLS_PT_RigSystem"
+    bl_category = 'Tools'
+    bl_parent_id = "VTOOLS_PT_rigSystem"
     bl_options = {'DEFAULT_CLOSED'} 
     
         
@@ -39,17 +39,13 @@ class VTOOLS_PN_boneTools(bpy.types.Panel):
 
 # -- REGISTER -- #       
 
-def register():
-    from bpy.utils import register_class
-    register_class(VTOOLS_PN_boneTools)
-    
+def register_bonetools():
+    bpy.utils.register_class(VTOOLS_PT_boneTools)
+   
+def unregister_bonetools():
+    bpy.utils.unregister_class(VTOOLS_PT_boneTools)
 
-    
-def unregister():
-    from bpy.utils import unregister_class
-    unregister_class(VTOOLS_PN_boneTools)
-    
 #---------- CLASES ----------#
 
 if __name__ == "__main__":
-    register()
+    register_bonetools()

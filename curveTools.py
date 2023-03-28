@@ -194,11 +194,11 @@ class VTOOLS_OP_RS_pasteKeyToAllActions(bpy.types.Operator):
         return {'FINISHED'}
                     
 class VTOOLS_PT_animationCurveTools(bpy.types.Panel):
-    bl_label = "Animation Curve Tools"
-    #bl_parent_id = "VTOOLS_PN_RigSystem"
-    bl_space_type = 'VIEW_3D'
+    bl_label = "VT - Curve Tools"
+    #bl_parent_id = "VTOOLS_PT_rigSystem"
+    #bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Rig vTools'
+    bl_category = 'Tool'
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
@@ -226,6 +226,7 @@ class VTOOLS_PT_animationCurveTools(bpy.types.Panel):
 
 class VTOOLS_PT_animationCurveTools_VIEW3D(VTOOLS_PT_animationCurveTools):
     bl_space_type = 'VIEW_3D'
+    bl_parent_id = "VTOOLS_PT_rigSystem"
     
 class VTOOLS_PT_animationCurveTools_DOPESHEET(VTOOLS_PT_animationCurveTools):
     bl_space_type = 'DOPESHEET_EDITOR'
@@ -304,12 +305,12 @@ class VTOOLS_OP_RS_bakeAllActions(bpy.types.Operator):
         return {'FINISHED'}       
 
 class VTOOLS_PT_BakingAnimation(bpy.types.Panel):
+    bl_label = "VT - Baking Animation"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_label = "Baking"
-    bl_category = 'Rig vTools'
-    #bl_parent_id = "VTOOLS_PT_RigSystem"
-    #bl_options = {'DEFAULT_CLOSED'} 
+    bl_category = 'Tool'
+    bl_parent_id = "VTOOLS_PT_rigSystem"
+    bl_options = {'DEFAULT_CLOSED'} 
     
         
     @classmethod
@@ -339,19 +340,19 @@ class VTOOLS_PT_BakingAnimation(bpy.types.Panel):
 
 #---------- REGISTER ----------#
     
-def register():  
+def register_curveTools():  
     
-    from bpy.utils import register_class
+    
     #register_class(VTOOLS_PT_animationCurveTools)
-    register_class(VTOOLS_PT_animationCurveTools_VIEW3D)
-    register_class(VTOOLS_PT_animationCurveTools_DOPESHEET)
-    register_class(VTOOLS_PT_animationCurveTools_GRAPHEDITOR)
-    register_class(VTOOLS_OP_RS_renameAnimationCurves)
-    register_class(VTOOLS_OP_RS_deleteInvalidCurves)
-    register_class(VTOOLS_OP_RS_bakeAllActions)
-    register_class(VTOOLS_PT_BakingAnimation)
+    bpy.utils.register_class(VTOOLS_PT_animationCurveTools_VIEW3D)
+    bpy.utils.register_class(VTOOLS_PT_animationCurveTools_DOPESHEET)
+    bpy.utils.register_class(VTOOLS_PT_animationCurveTools_GRAPHEDITOR)
+    bpy.utils.register_class(VTOOLS_OP_RS_renameAnimationCurves)
+    bpy.utils.register_class(VTOOLS_OP_RS_deleteInvalidCurves)
+    bpy.utils.register_class(VTOOLS_OP_RS_bakeAllActions)
+    bpy.utils.register_class(VTOOLS_PT_BakingAnimation)
     
-    register_class(VTOOLS_OP_RS_pasteKeyToAllActions)
+    bpy.utils.register_class(VTOOLS_OP_RS_pasteKeyToAllActions)
 
     bpy.types.Scene.vt_onlyActiveAction = bpy.props.BoolProperty(default = False)
     
@@ -366,22 +367,21 @@ def register():
     bpy.types.Scene.vt_clearLocation = bpy.props.BoolProperty(default = True)
     bpy.types.Scene.vt_clearScale = bpy.props.BoolProperty(default = True)
     bpy.types.Scene.vt_clearRotation = bpy.props.BoolProperty(default = False)
-    
+
      
-def unregister():
+def unregister_curveTools():
     
-    from bpy.utils import unregister_class
     #unregister_class(VTOOLS_PT_animationCurveTools)
-    unregister_class(VTOOLS_PT_animationCurveTools_VIEW3D)
-    unregister_class(VTOOLS_PT_animationCurveTools_DOPESHEET)
-    unregister_class(VTOOLS_PT_animationCurveTools_GRAPHEDITOR)
-    unregister_class(VTOOLS_OP_RS_renameAnimationCurves)
-    unregister_class(VTOOLS_OP_RS_deleteInvalidCurves)
-    unregister_class(VTOOLS_OP_RS_bakeAllActions)
-    unregister_class(VTOOLS_PT_BakingAnimation)
+    bpy.utils.unregister_class(VTOOLS_PT_animationCurveTools_VIEW3D)
+    bpy.utils.unregister_class(VTOOLS_PT_animationCurveTools_DOPESHEET)
+    bpy.utils.unregister_class(VTOOLS_PT_animationCurveTools_GRAPHEDITOR)
+    bpy.utils.unregister_class(VTOOLS_OP_RS_renameAnimationCurves)
+    bpy.utils.unregister_class(VTOOLS_OP_RS_deleteInvalidCurves)
+    bpy.utils.unregister_class(VTOOLS_OP_RS_bakeAllActions)
+    bpy.utils.unregister_class(VTOOLS_PT_BakingAnimation)
     
     
-    unregister_class(VTOOLS_OP_RS_pasteKeyToAllActions)
+    bpy.utils.unregister_class(VTOOLS_OP_RS_pasteKeyToAllActions)
 
 
     del bpy.types.Scene.vt_onlyActiveAction
@@ -395,12 +395,8 @@ def unregister():
     del bpy.types.Scene.vt_clearRotation
 
     
-    
-    
-
 #---------- CLASES ----------#
 
 
-
 if __name__ == "__main__":
-    register() 
+    register_curveTools() 

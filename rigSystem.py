@@ -9,23 +9,7 @@ from bpy.props import (StringProperty,BoolProperty,IntProperty,FloatProperty,Flo
 from bpy.types import (Menu, Panel,Operator,AddonPreferences, PropertyGroup)
 from bpy_extras.io_utils import ImportHelper
 
-import vtools_rigSystem
 
-if "vtools_rigSystem" in locals():
-    #print("rig system local")
-    importlib.reload(vtools_rigSystem)
-
-#import vtools_rigSystem.vtools_rigUI
-"""
-
-from vtools_rigSystem import vtools_rigUI
-
-if "vtools_rigUI" in locals():
-    #print("rigui local")
-    importlib.reload(vtools_rigSystem.vtools_rigUI)
-    rigUI = vtools_rigSystem.vtools_rigUI
-
-"""
 #from rna_prop_ui import rna_idprop_ui_prop_get
 
 #--- DEF GLOBAL --- #
@@ -42,12 +26,10 @@ def setChainVisibility(pSocketBoneName, pVisible, pType):
         if pType == "IK":
             strToFind = "ikTarget"
             visibleIK = findCustomProperty(socketBone, "visibleIK")
-            print("VISIBLE IK ", visibleIK)
             arm.pose.bones[socketBoneName][visibleIK] = int(not pVisible)
         elif pType == "FK":
             strToFind = "FKChain"
             visibleFK = findCustomProperty(socketBone, "visibleFK")
-            print("VISIBLE ", visibleFK)
             arm.pose.bones[socketBoneName][visibleFK] = int(not pVisible)
         elif pType == "FR":
             strToFind = "FreeChain"
@@ -547,18 +529,21 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
     def findLastChild(self,pBone):
         last = None
         b = pBone
-        if len(b.children) == 0:
-            last = b
-        elif b not in bpy.context.selected_pose_bones:
-            if b.parent != None:
-                last = b.parent
-        else:
-            for bc in b.children:
-                if bc in bpy.context.selected_pose_bones:
-                    last = self.findLastChild(bc)
-                else:
-                    last = b
-       
+        
+        selectedBones = bpy.context.selected_pose_bones
+        currentBone = pBone
+        while last == None:
+            if len(currentBone.children) == 0:
+                last = currentBone
+            else:
+                for c in currentBone.children: #LOOK IN CHILDRENS
+                    if c in selectedBones: #IF CHILDREN IN SELECTED BONES, CONTINUE
+                        currentBone = c
+                        break
+                    else:
+                        last = c
+                        break
+                        
         return last
                 
     def getSelectedChains(self):
@@ -1488,8 +1473,8 @@ class VTOOLS_OP_setChainVisibility(bpy.types.Operator):
 #----------- MAIN -----------------#
 
 class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
-    bl_label = "Bone chain Builder"
-    #bl_parent_id = "VTOOLS_PN_RigSystem"
+    bl_label = "VT - Rig Builder"
+    bl_parent_id = "VTOOLS_PT_rigSystem"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Tool'
@@ -1550,7 +1535,7 @@ class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
                
 class VTOOLS_PT_ikfkControls(bpy.types.Panel):
     bl_label = "VT - Rig Control"
-    #bl_parent_id = "VTOOLS_PN_RigSystem"
+    bl_parent_id = "VTOOLS_PT_rigSystem"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Tool'
@@ -1651,26 +1636,26 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     if ikDriverProperty != "":
                         if socketBone[ikDriverProperty] == True:
                             
-                            row = box.row( align=True) 
-                            row.prop(socketBone.constraints["IKControl"], "influence", text="FK/IK", emboss = True)
+                            col = box.column(align=True)
+                            col.prop(socketBone.constraints["IKControl"], "influence", text="FK/IK", emboss = True)
 
                             ikTargetControl = findCustomProperty(socketBone, "ikTarget")
                             ikBoneProperty = findCustomProperty(socketBone, "ikchainBone")
                             lastIkBone = socketBone[ikBoneProperty]
                             ikTargetBone = socketBone[ikTargetControl]
-                            row.prop(bpy.context.object.pose.bones[ikTargetBone].constraints["IK_stretchLimit"], "influence" , text = "Limit IK", emboss = True)
+                            col.prop(bpy.context.object.pose.bones[ikTargetBone].constraints["IK_stretchLimit"], "influence" , text = "Limit IK", emboss = True)
                         
                         
-                        row = box.row()    
+                        row = box.row(align=True)    
                         row.operator(VTOOLS_OP_RS_snapIKFK.bl_idname, text="IK -> FK")
                         row.operator(VTOOLS_OP_RS_snapFKIK.bl_idname, text="FK -> IK")
                     
-                    row = box.row(align=True) 
+                    col = box.column(align=True) 
                     if socketBone.constraints.find("limitScaleC") != -1:
-                        row.prop(socketBone.constraints["limitScaleC"], "influence", text="No Stretch", emboss = True)
+                        col.prop(socketBone.constraints["limitScaleC"], "influence", text="No Stretch", emboss = True)
                     
                     if socketBone.constraints.find("maintainVolumeC") != -1:
-                        row.prop(socketBone.constraints["maintainVolumeC"], "influence", text="Maintain Volume", emboss = True)
+                        col.prop(socketBone.constraints["maintainVolumeC"], "influence", text="Maintain Volume", emboss = True)
                     
                    
 
@@ -1701,24 +1686,18 @@ class VTOOLS_ikfksolver(bpy.types.PropertyGroup):
 
 #---------- REGISTER ----------#
     
-def register():  
+def register_rigsystem():  
     
-    from bpy.utils import register_class
+    bpy.utils.register_class(VTOOLS_PT_ikfkSetup)
+    bpy.utils.register_class(VTOOLS_PT_ikfkControls)
     
-    #register_class(VTOOLS_PN_RigSystem)
-    register_class(VTOOLS_PT_ikfkSetup)
-    register_class(VTOOLS_PT_ikfkControls)
-    
-    #register_class(VTOOLS_ikfksolver)
-    
-    
-    register_class(VTOOLS_OP_RS_addArmature)
-    register_class(VTOOLS_OP_RS_createIK)
-    register_class(VTOOLS_OP_RS_snapIKFK)
-    register_class(VTOOLS_OP_RS_snapFKIK)
-    register_class(VTOOLS_OP_RS_rebuildChain)
-    register_class(VTOOLS_OP_RS_setRotationMode)
-    register_class(VTOOLS_OP_setChainVisibility)
+    bpy.utils.register_class(VTOOLS_OP_RS_addArmature)
+    bpy.utils.register_class(VTOOLS_OP_RS_createIK)
+    bpy.utils.register_class(VTOOLS_OP_RS_snapIKFK)
+    bpy.utils.register_class(VTOOLS_OP_RS_snapFKIK)
+    bpy.utils.register_class(VTOOLS_OP_RS_rebuildChain)
+    bpy.utils.register_class(VTOOLS_OP_RS_setRotationMode)
+    bpy.utils.register_class(VTOOLS_OP_setChainVisibility)
     
     
     bpy.types.Scene.fkControlObjects = bpy.props.StringProperty()
@@ -1732,22 +1711,20 @@ def register():
     bpy.types.Scene.childChainSocket = bpy.props.BoolProperty(default = True)
     bpy.types.Scene.fkStretchChain = bpy.props.BoolProperty(default = True)
     bpy.types.Scene.addEndBone = bpy.props.BoolProperty(default = True)
-     
-def unregister():
+ 
+def unregister_rigsystem():
     
-    from bpy.utils import unregister_class
-    #unregister_class(VTOOLS_PN_RigSystem)
-    unregister_class(VTOOLS_PT_ikfkSetup)
-    unregister_class(VTOOLS_PT_ikfkControls)
+    bpy.utils.unregister_class(VTOOLS_PT_ikfkSetup)
+    bpy.utils.unregister_class(VTOOLS_PT_ikfkControls)
     
     #unregister_class(VTOOLS_ikfksolver)
-    unregister_class(VTOOLS_OP_RS_addArmature)
-    unregister_class(VTOOLS_OP_RS_createIK)
-    unregister_class(VTOOLS_OP_RS_snapIKFK)
-    unregister_class(VTOOLS_OP_RS_snapFKIK)
-    unregister_class(VTOOLS_OP_RS_rebuildChain)
-    unregister_class(VTOOLS_OP_RS_setRotationMode)
-    unregister_class(VTOOLS_OP_setChainVisibility)
+    bpy.utils.unregister_class(VTOOLS_OP_RS_addArmature)
+    bpy.utils.unregister_class(VTOOLS_OP_RS_createIK)
+    bpy.utils.unregister_class(VTOOLS_OP_RS_snapIKFK)
+    bpy.utils.unregister_class(VTOOLS_OP_RS_snapFKIK)
+    bpy.utils.unregister_class(VTOOLS_OP_RS_rebuildChain)
+    bpy.utils.unregister_class(VTOOLS_OP_RS_setRotationMode)
+    bpy.utils.unregister_class(VTOOLS_OP_setChainVisibility)
     
     del bpy.types.Scene.fkControlObjects
     del bpy.types.Scene.fkFreeControlObjects
@@ -1759,7 +1736,9 @@ def unregister():
     del bpy.types.Scene.fkStretchChain
     del bpy.types.Scene.isHumanoidChain
     del bpy.types.Scene.addEndBone
+
     
 #---------- CLASES ----------#
 if __name__ == "__main__":
-    register()
+    register_rigsystem()
+
