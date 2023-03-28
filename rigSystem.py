@@ -53,17 +53,30 @@ def setChainVisibility(pSocketBoneName, pVisible, pType):
             strToFind = "FreeChain"
             visibleFR = findCustomProperty(socketBone, "visibleFR")
             arm.pose.bones[socketBoneName][visibleFR] = int(not pVisible)
+        elif pType == "SK":
+            strToFind = "SOCKETCHAIN"
+            visibleSK = findCustomProperty(socketBone, "visibleSK")
+            arm.pose.bones[socketBoneName][visibleSK] = int(not pVisible)
+        
+        if pType != "SK":
+            for b in arm.pose.bones:
+                customProp = findCustomProperty(b, "chainSocket")
+                if customProp != "":
+                    if b[customProp] == socketBoneName:
+                        if b.name.find(strToFind) != -1:
+                            b.bone.hide = pVisible
+                            b.bone.select = pVisible
+                            
+                            if pVisible == False:
+                                arm.data.bones.active = bpy.context.object.data.bones[b.name]
+        else:
+            socketBone = arm.pose.bones[socketBoneName]
+            socketBone.bone.hide = pVisible
+            socketBone.bone.select = pVisible
             
-        for b in arm.pose.bones:
-            customProp = findCustomProperty(b, "chainSocket")
-            if customProp != "":
-                if b[customProp] == socketBoneName:
-                    if b.name.find(strToFind) != -1:
-                        b.bone.hide = pVisible
-                        b.bone.select = pVisible
-                        
-                        if pVisible == False:
-                            arm.data.bones.active = bpy.context.object.data.bones[b.name]
+            if pVisible == False:
+                arm.data.bones.active = bpy.context.object.data.bones[socketBoneName]
+            
     
     return socketBoneName
 
@@ -1332,6 +1345,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
                 fkControlBone[self.chainId + "_iktargetid"] = pIkTargetName 
                 fkControlBone[self.chainId + "_visibleFK"] = True
                 fkControlBone[self.chainId + "_visibleFR"] = True
+                fkControlBone[self.chainId + "_visibleSK"] = True
                 
          
         return newChain
@@ -1478,7 +1492,7 @@ class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
     #bl_parent_id = "VTOOLS_PN_RigSystem"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Rig vTools'
+    bl_category = 'Tool'
     bl_options = {'DEFAULT_CLOSED'}
     
 
@@ -1566,10 +1580,29 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     socketBone = bpy.context.object.pose.bones[chainSocketName]
                     
                     
-                    #VISIBILITY CONTROLS
+                    #VISIBILITY BOX
                     
-                    row = layout.row(align=True)
+                    box = layout.box()
+                    #box.label(text="Visibility")
+                    col = box.column(align=True)
+                    row = col.row(align=True)
                     
+                    
+                    visibleSK = findCustomProperty(socketBone, "visibleSK")
+                    if visibleSK != "":
+                        if socketBone[visibleSK] == 1:
+                            opIcon = "HIDE_OFF"
+                            visible = True
+                        else:
+                            opIcon = "HIDE_ON"
+                            visible = False
+                        
+                        
+                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="SK", icon=opIcon)
+                        op.action = "SK"
+                        op.visibility = visible
+                        
+                        
                     visibleFK = findCustomProperty(socketBone, "visibleFK")
                     if visibleFK != "":
                         if socketBone[visibleFK] == 1:
@@ -1583,7 +1616,8 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                         op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="FK", icon=opIcon)
                         op.action = "FK"
                         op.visibility = visible
-                
+                    
+                    row = col.row(align=True)
                     visibleIK = findCustomProperty(socketBone, "visibleIK")
                     if visibleIK != "":
                         if socketBone[visibleIK] == 1:
@@ -1609,28 +1643,34 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                         op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="FR", icon=opIcon)
                         op.action = "FR"
                         op.visibility = visible
-                        
+                    
+                    #CONTROL BOX
+                    box = layout.box()
+                    
                     ikDriverProperty = findCustomProperty(socketBone, "ikDriver")
                     if ikDriverProperty != "":
                         if socketBone[ikDriverProperty] == True:
-
-                            layout.prop(socketBone.constraints["IKControl"], "influence", text="FK/IK", emboss = True)
+                            
+                            row = box.row( align=True) 
+                            row.prop(socketBone.constraints["IKControl"], "influence", text="FK/IK", emboss = True)
 
                             ikTargetControl = findCustomProperty(socketBone, "ikTarget")
                             ikBoneProperty = findCustomProperty(socketBone, "ikchainBone")
                             lastIkBone = socketBone[ikBoneProperty]
                             ikTargetBone = socketBone[ikTargetControl]
-                            layout.prop(bpy.context.object.pose.bones[ikTargetBone].constraints["IK_stretchLimit"], "influence" , text = "Limit IK", emboss = True)
+                            row.prop(bpy.context.object.pose.bones[ikTargetBone].constraints["IK_stretchLimit"], "influence" , text = "Limit IK", emboss = True)
                         
-                        row = layout.row()    
-                        row.operator(VTOOLS_OP_RS_snapIKFK.bl_idname, text="IK-FK")
-                        row.operator(VTOOLS_OP_RS_snapFKIK.bl_idname, text="FK-IK")
+                        
+                        row = box.row()    
+                        row.operator(VTOOLS_OP_RS_snapIKFK.bl_idname, text="IK -> FK")
+                        row.operator(VTOOLS_OP_RS_snapFKIK.bl_idname, text="FK -> IK")
                     
+                    row = box.row(align=True) 
                     if socketBone.constraints.find("limitScaleC") != -1:
-                        layout.prop(socketBone.constraints["limitScaleC"], "influence", text="No Stretch", emboss = True)
+                        row.prop(socketBone.constraints["limitScaleC"], "influence", text="No Stretch", emboss = True)
                     
                     if socketBone.constraints.find("maintainVolumeC") != -1:
-                        layout.prop(socketBone.constraints["maintainVolumeC"], "influence", text="Maintain Volume", emboss = True)
+                        row.prop(socketBone.constraints["maintainVolumeC"], "influence", text="Maintain Volume", emboss = True)
                     
                    
 
