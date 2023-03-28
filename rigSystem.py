@@ -14,6 +14,15 @@ from bpy_extras.io_utils import ImportHelper
 
 #--- DEF GLOBAL --- #
 
+def getSelectedBoneNames():
+    
+    selectedBoneNameList = []
+    
+    for b in bpy.context.selected_pose_bones:
+        selectedBoneNameList.append(b.name)
+    
+    return selectedBoneNameList
+
 def setChainVisibility(pSocketBoneName, pVisible, pType):
     
     arm = bpy.context.object    
@@ -66,7 +75,7 @@ def getFKChain():
     
     fkBones = None
     arm = bpy.context.active_object
-    data = getChainSocketBone()
+    data = getChainSocketBone(bpy.context.active_pose_bone)
     
     if data != None:
         
@@ -105,7 +114,7 @@ def getFreeChain():
 def getIKChain():
     ikBones = None
     arm = bpy.context.active_object
-    data = getChainSocketBone()
+    data = getChainSocketBone(bpy.context.active_pose_bone)
     
     if data != None:
         
@@ -128,7 +137,7 @@ def getIKChain():
 def getIkTarget():
     
     arm = bpy.context.active_object
-    data = getChainSocketBone()
+    data = getChainSocketBone(bpy.context.active_pose_bone)
     ikTargetName = None
     
     if data != None:
@@ -196,10 +205,10 @@ def hideBoneChain(pArm, pLastBone, pHide, pChainLenght):
             else: 
                 break
 
-def getChainSocketBone():
+def getChainSocketBone(pBone):
     
     socketBone = None
-    activeBone = bpy.context.active_pose_bone
+    activeBone = pBone 
     if activeBone != None:
         
         if activeBone.name.find("SOCKETCHAIN") == -1:
@@ -1379,7 +1388,7 @@ class VTOOLS_OP_RS_snapIKFK(bpy.types.Operator):
     
     def execute(self, context):
         arm = bpy.context.active_object
-        data = getChainSocketBone()
+        data = getChainSocketBone(bpy.context.active_pose_bone)
         if data != None:
             ikTargetProperty = findCustomProperty(data, "ikTarget")
             fkchainProperty = findCustomProperty(data, "fkchainBone")
@@ -1439,13 +1448,15 @@ class VTOOLS_OP_RS_setRotationMode(bpy.types.Operator):
     
     def execute(self, context):
         arm = bpy.context.active_object
-        socketBone = getChainSocketBone()
+        socketBone = getChainSocketBone(bpy.context.active_pose_bone)
         if socketBone != None:    
             setRotationMode(arm.pose.bones[socketBone.name].rotation_mode)     
             
         return {'FINISHED'}
 
 
+    
+    
 class VTOOLS_OP_setChainVisibility(bpy.types.Operator):
     bl_idname = "vtoolsrigsystem.setchainvisibility"
     bl_label = "Show selected chain"
@@ -1457,17 +1468,21 @@ class VTOOLS_OP_setChainVisibility(bpy.types.Operator):
     def execute(self, context):
         
         arm = bpy.context.object
-        socketBone = getChainSocketBone()
-        if socketBone != None:
-            setChainVisibility(socketBone.name, self.visibility, self.action)
-            """
-            propName = "visible" + self.action
-            visibility = findCustomProperty(socketBone, propName)
-            #visibility = getattr(socketBone, propName)
-            if visibility != None:
-                setChainVisibility(socketBone.name, socketBone[visibility], self.action)
-            """
-            
+        selectedBones = getSelectedBoneNames()
+        
+        if bpy.context.object.ikFkAffectAllChains == False:
+            #ONLY ON SELECTED BONES
+            for b in selectedBones:
+                socketBone = getChainSocketBone(arm.pose.bones[b])
+                if socketBone != None:
+                    setChainVisibility(socketBone.name, self.visibility, self.action)
+        else:
+            #ALL BONES
+            for b in arm.pose.bones:
+                socketBone = getChainSocketBone(b)
+                if socketBone != None:
+                    setChainVisibility(socketBone.name, self.visibility, self.action)
+
         return {'FINISHED'}
     
 #----------- MAIN -----------------#
@@ -1510,7 +1525,7 @@ class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
             box.operator(VTOOLS_OP_RS_createIK.bl_idname, text="Create Chain")
             box.operator(VTOOLS_OP_RS_rebuildChain.bl_idname, text="Rebuild")
 
-            data = getChainSocketBone()
+            data = getChainSocketBone(bpy.context.active_pose_bone)
             if data != None:
                 
                 box = layout.box()
@@ -1568,8 +1583,10 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     #VISIBILITY BOX
                     
                     box = layout.box()
+                    
                     #box.label(text="Visibility")
                     col = box.column(align=True)
+                    col.prop(bpy.context.object,"ikFkAffectAllChains", text="All Chains", toggle = True)
                     row = col.row(align=True)
                     
                     
@@ -1711,6 +1728,9 @@ def register_rigsystem():
     bpy.types.Scene.childChainSocket = bpy.props.BoolProperty(default = True)
     bpy.types.Scene.fkStretchChain = bpy.props.BoolProperty(default = True)
     bpy.types.Scene.addEndBone = bpy.props.BoolProperty(default = True)
+    
+    #OBJECT PROPERTIES 
+    bpy.types.Object.ikFkAffectAllChains = bpy.props.BoolProperty(default = True, description="Affect all chains within the armature or only from selected Bones")
  
 def unregister_rigsystem():
     
@@ -1736,6 +1756,9 @@ def unregister_rigsystem():
     del bpy.types.Scene.fkStretchChain
     del bpy.types.Scene.isHumanoidChain
     del bpy.types.Scene.addEndBone
+    
+    #OBJECT PROPERTIES 
+    del bpy.types.Object.ikFkAffectAllChains
 
     
 #---------- CLASES ----------#

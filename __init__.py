@@ -12,7 +12,6 @@ bl_info = {
 import bpy
 import importlib
 
-
 class VTOOLS_PT_rigSystem(bpy.types.Panel):
     bl_label = "VT - Rig Tools"
     bl_space_type = 'VIEW_3D'
