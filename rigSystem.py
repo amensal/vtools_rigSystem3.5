@@ -23,52 +23,55 @@ def getSelectedBoneNames():
     
     return selectedBoneNameList
 
-def setChainVisibility(pSocketBoneName, pVisible, pType):
+def setChainVisibility(pSocketBoneName, pVisible, pType, pUsedSocketList):
     
     arm = bpy.context.object    
     socketBoneName = pSocketBoneName
-    socketBone = arm.pose.bones[pSocketBoneName]
-
-    if arm != None:            
-        strToFind = ""
-        
-        if pType == "IK":
-            strToFind = "ikTarget"
-            visibleIK = findCustomProperty(socketBone, "visibleIK")
-            arm.pose.bones[socketBoneName][visibleIK] = int(not pVisible)
-        elif pType == "FK":
-            strToFind = "FKChain"
-            visibleFK = findCustomProperty(socketBone, "visibleFK")
-            arm.pose.bones[socketBoneName][visibleFK] = int(not pVisible)
-        elif pType == "FR":
-            strToFind = "FreeChain"
-            visibleFR = findCustomProperty(socketBone, "visibleFR")
-            arm.pose.bones[socketBoneName][visibleFR] = int(not pVisible)
-        elif pType == "SK":
-            strToFind = "SOCKETCHAIN"
-            visibleSK = findCustomProperty(socketBone, "visibleSK")
-            arm.pose.bones[socketBoneName][visibleSK] = int(not pVisible)
-        
-        if pType != "SK":
-            for b in arm.pose.bones:
-                customProp = findCustomProperty(b, "chainSocket")
-                if customProp != "":
-                    if b[customProp] == socketBoneName:
-                        if b.name.find(strToFind) != -1:
-                            b.bone.hide = pVisible
-                            b.bone.select = pVisible
-                            
-                            if pVisible == False:
-                                arm.data.bones.active = bpy.context.object.data.bones[b.name]
-        else:
-            socketBone = arm.pose.bones[socketBoneName]
-            socketBone.bone.hide = pVisible
-            socketBone.bone.select = pVisible
-            
-            if pVisible == False:
-                arm.data.bones.active = bpy.context.object.data.bones[socketBoneName]
-            
     
+    if socketBoneName not in pUsedSocketList:
+        print("SOCKET NOT USED")
+        socketBone = arm.pose.bones[pSocketBoneName]
+
+        if arm != None:            
+            strToFind = ""
+            
+            if pType == "IK":
+                strToFind = "ikTarget"
+                visibleIK = findCustomProperty(socketBone, "visibleIK")
+                arm.pose.bones[socketBoneName][visibleIK] = int(not pVisible)
+            elif pType == "FK":
+                strToFind = "FKChain"
+                visibleFK = findCustomProperty(socketBone, "visibleFK")
+                arm.pose.bones[socketBoneName][visibleFK] = int(not pVisible)
+            elif pType == "FR":
+                strToFind = "FreeChain"
+                visibleFR = findCustomProperty(socketBone, "visibleFR")
+                arm.pose.bones[socketBoneName][visibleFR] = int(not pVisible)
+            elif pType == "SK":
+                strToFind = "SOCKETCHAIN"
+                visibleSK = findCustomProperty(socketBone, "visibleSK")
+                arm.pose.bones[socketBoneName][visibleSK] = int(not pVisible)
+            
+            if pType != "SK":
+                for b in arm.pose.bones:
+                    customProp = findCustomProperty(b, "chainSocket")
+                    if customProp != "":
+                        if b[customProp] == socketBoneName:
+                            if b.name.find(strToFind) != -1:
+                                b.bone.hide = pVisible
+                                b.bone.select = pVisible
+                                
+                                if pVisible == False:
+                                    arm.data.bones.active = bpy.context.object.data.bones[b.name]
+            else:
+                socketBone = arm.pose.bones[socketBoneName]
+                socketBone.bone.hide = pVisible
+                socketBone.bone.select = pVisible
+                
+                if pVisible == False:
+                    arm.data.bones.active = bpy.context.object.data.bones[socketBoneName]
+                
+        
     return socketBoneName
 
 def getFKChain():
@@ -270,6 +273,7 @@ def getSelectedChain(pArm):
     
     #-- EXTRACT ORDERED BONE NAMES
     
+    print ("PRE SELECT ", selBones)
     for b in selBones:
         tmp_b = b
         cont = 0
@@ -282,7 +286,8 @@ def getSelectedChain(pArm):
                 break
             
         boneChainNames[cont] = b.name
-
+    
+    print("SELECTED BONES ", boneChainNames)
     return boneChainNames
 
 def duplicateBone(pNewBoneName, pArm, pBoneName, pParenting):
@@ -593,6 +598,8 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         
         #print("ENTRA -------------------- ", chains)
         
+        print("CHAINS ", chains)
+        """
         for c in chains:
             bpy.ops.object.mode_set(mode='POSE')
             
@@ -614,11 +621,11 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
 
             #bpy.ops.vtoolsrigsystem.setrotationmode(rotationMode=rotMode)
             
-            """
             #ADD CHAIN TO UI
-            rigUI.rigUIAddChain(arm.name, socketBoneName)
-            """
+            #rigUI.rigUIAddChain(arm.name, socketBoneName)
             
+        """
+        
         return {'FINISHED'}
         
     def ignoreUsedBones(self, pArm):
@@ -783,6 +790,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='POSE')
         selBones = getSelectedChain(arm)
         
+        
         #CHECK IF IS A SINGLE CHAIN OR CAN HAVE IK
         lenSelBones = len(selBones)
         if lenSelBones == 1:
@@ -812,7 +820,13 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             #CREATE SOCKET
             sockectBoneName = self.createSocketBone(selBones)
             
-            bpy.ops.object.mode_set(mode='POSE')   
+            bpy.ops.object.mode_set(mode='POSE') 
+            
+            #-- DEF BONES CUSTOM PROPERTIES
+            
+            for defBone in selBones:
+                arm.pose.bones[defBone][self.chainId + "_chainSocket"] = sockectBoneName
+                arm.pose.bones[defBone][self.chainId + "_chainId"] = self.chainId  
             
             #-- CREATE IK
             if bpy.context.scene.addIkChain == True and singleChain == False:
@@ -1468,20 +1482,22 @@ class VTOOLS_OP_setChainVisibility(bpy.types.Operator):
     def execute(self, context):
         
         arm = bpy.context.object
-        selectedBones = getSelectedBoneNames()
-        
+        usedSocketList = []
         if bpy.context.object.ikFkAffectAllChains == False:
+            selectedBones = getSelectedBoneNames()
             #ONLY ON SELECTED BONES
             for b in selectedBones:
                 socketBone = getChainSocketBone(arm.pose.bones[b])
                 if socketBone != None:
-                    setChainVisibility(socketBone.name, self.visibility, self.action)
+                    usedSocket = setChainVisibility(socketBone.name, self.visibility, self.action, usedSocketList)
+                    usedSocketList.append(usedSocket)
         else:
             #ALL BONES
             for b in arm.pose.bones:
                 socketBone = getChainSocketBone(b)
                 if socketBone != None:
-                    setChainVisibility(socketBone.name, self.visibility, self.action)
+                    usedSocket = setChainVisibility(socketBone.name, self.visibility, self.action, usedSocketList)
+                    usedSocketList.append(usedSocket)
 
         return {'FINISHED'}
     
@@ -1605,6 +1621,21 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                         op.visibility = visible
                         
                         
+                    visibleIK = findCustomProperty(socketBone, "visibleIK")
+                    if visibleIK != "":
+                        if socketBone[visibleIK] == 1:
+                            opIcon = "HIDE_OFF"
+                            visible = True
+                        else:
+                            opIcon = "HIDE_ON"
+                            visible = False
+                            
+                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="IK", icon=opIcon)
+                        op.action = "IK"
+                        op.visibility = visible
+                    
+                    row = col.row(align=True)
+                    
                     visibleFK = findCustomProperty(socketBone, "visibleFK")
                     if visibleFK != "":
                         if socketBone[visibleFK] == 1:
@@ -1618,20 +1649,8 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                         op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="FK", icon=opIcon)
                         op.action = "FK"
                         op.visibility = visible
+                        
                     
-                    row = col.row(align=True)
-                    visibleIK = findCustomProperty(socketBone, "visibleIK")
-                    if visibleIK != "":
-                        if socketBone[visibleIK] == 1:
-                            opIcon = "HIDE_OFF"
-                            visible = True
-                        else:
-                            opIcon = "HIDE_ON"
-                            visible = False
-                            
-                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="IK", icon=opIcon)
-                        op.action = "IK"
-                        op.visibility = visible
                     
                     visibleFR = findCustomProperty(socketBone, "visibleFR")
                     if visibleFR != "":
@@ -1730,7 +1749,7 @@ def register_rigsystem():
     bpy.types.Scene.addEndBone = bpy.props.BoolProperty(default = True)
     
     #OBJECT PROPERTIES 
-    bpy.types.Object.ikFkAffectAllChains = bpy.props.BoolProperty(default = True, description="Affect all chains within the armature or only from selected Bones")
+    bpy.types.Object.ikFkAffectAllChains = bpy.props.BoolProperty(default = True, description="(True) Affect all chains within the armature or (False) only from selected Bones")
  
 def unregister_rigsystem():
     
