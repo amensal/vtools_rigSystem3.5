@@ -29,7 +29,6 @@ def setChainVisibility(pSocketBoneName, pVisible, pType, pUsedSocketList):
     socketBoneName = pSocketBoneName
     
     if socketBoneName not in pUsedSocketList:
-        print("SOCKET NOT USED")
         socketBone = arm.pose.bones[pSocketBoneName]
 
         if arm != None:            
@@ -51,6 +50,10 @@ def setChainVisibility(pSocketBoneName, pVisible, pType, pUsedSocketList):
                 strToFind = "SOCKETCHAIN"
                 visibleSK = findCustomProperty(socketBone, "visibleSK")
                 arm.pose.bones[socketBoneName][visibleSK] = int(not pVisible)
+            elif pType == "ST":
+                strToFind = "STRETCHTOP"
+                visibleST = findCustomProperty(socketBone, "visibleST")
+                arm.pose.bones[socketBoneName][visibleST] = int(not pVisible)
             
             if pType != "SK":
                 for b in arm.pose.bones:
@@ -150,7 +153,22 @@ def getIkTarget():
             ikTargetName = None
         
     return ikTargetName  
-                    
+
+def getStretchControl():
+    
+    arm = bpy.context.active_object
+    data = getChainSocketBone(bpy.context.active_pose_bone)
+    stretchBoneName = None
+    
+    if data != None:
+        stretchBoneProp = findCustomProperty(data, "stretchTopBone")
+        stretchBoneName = data[stretchBoneProp]
+        if stretchBoneName == "":
+            stretchBoneName = None
+        
+    return stretchBoneName  
+
+
 def setRotationMode(pRotationMode):
     arm = bpy.context.active_object
     #socketBoneName = getChainSocketBone().name
@@ -658,6 +676,104 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             
         return id
     
+    #CREATE NEW BONE FROM SCRATCH
+    
+    def createNewBone(self, pArm, pNewBoneName, pHeadLoc, pTailLoc, pDef, pParent, pUseConnect):
+    
+        newBoneName = None
+        bpy.ops.object.mode_set(mode='EDIT')
+        
+        if pArm.data.edit_bones.find(pNewBoneName) == -1:
+            newBone = pArm.data.edit_bones.new(pNewBoneName)
+            newBone.parent = pArm.data.edit_bones[pParent]
+            newBone.use_connect = pUseConnect
+            newBone.tail = pTailLoc
+            newBone.head = pHeadLoc
+            newBone.name = newBoneName = pNewBoneName
+            newBone.use_deform = pDef
+            
+            
+     
+        bpy.ops.object.mode_set(mode='OBJECT') 
+        
+        return newBoneName
+
+    # CREATE STRETCH BONE
+    def createStretchBone(self, pSocketBoneName, pLastFkBoneName, pIKTargetName):
+        
+        arm = bpy.context.object
+        stretchBoneName = None
+        stretchTopName = None
+        
+        prevMode = bpy.context.mode
+        newBoneName = pSocketBoneName.replace("SOCKETCHAIN-", "STRETCH-")
+        bpy.ops.object.mode_set(mode='EDIT')
+        
+        #CREATE STRETCH BONE (NEW BONE)
+        editBones = arm.data.edit_bones
+        stretchBoneName = self.createNewBone(arm, newBoneName, editBones[pSocketBoneName].head, editBones[pLastFkBoneName].head, False, pSocketBoneName, False)
+        
+        #CRATE TOP STRETCH (DUPLCIATE FK TO MAINTAIN IK CONSTRAINT)
+        newTopName = pSocketBoneName.replace("SOCKETCHAIN-", "STRETCHTOP-")
+        stretchTopName = duplicateBone(newTopName, arm, pLastFkBoneName , False)
+        arm.data.edit_bones[stretchTopName].use_connect = False
+        arm.data.edit_bones[stretchTopName].parent = arm.data.edit_bones[pSocketBoneName]
+        
+        #ADD STRETCH CONSTRAINT
+        bpy.ops.object.mode_set(mode='POSE')
+        stretchBone = arm.pose.bones[stretchBoneName]
+        tCons = stretchBone.constraints.new('STRETCH_TO')
+        tCons.name = "StretchBone_stretchTo"
+        tCons.target = arm
+        tCons.subtarget = arm.pose.bones[stretchTopName].name
+        tCons.volume = "NO_VOLUME"
+        tCons.influence = 1
+        
+        if pIKTargetName != "" and pIKTargetName != None:
+            #ADD IK SWITCH CONSTRAINT
+            tCons = arm.pose.bones[stretchTopName].constraints.new('COPY_TRANSFORMS')
+            tCons.name = "IK_TRANSFORM"
+            tCons.target = arm
+            tCons.subtarget = pIKTargetName
+            tCons.target_space = 'WORLD'
+            tCons.owner_space = 'WORLD'
+            tCons.influence = 0
+            
+            #SET IK DRIVER
+            tmpD = tCons.driver_add("influence")
+            tmpD.driver.type = 'SCRIPTED'
+            tmpD.driver.expression = "ikControl"
+            
+            tmpV = tmpD.driver.variables.new()
+            tmpV.name = "ikControl"
+            tmpV.targets[0].id_type = 'OBJECT'
+            tmpV.targets[0].id = bpy.data.objects[arm.name]
+            tmpV.targets[0].data_path = "pose.bones[\""+pSocketBoneName+"\"].constraints[\"IKControl\"].influence"
+            
+        
+                    
+        #ADD SOCKET BONE CUSTOM PROPERTIES
+        socketBone = arm.pose.bones[pSocketBoneName]
+        #socketBone[self.chainId + "_stretchBone"] = stretchBoneName
+        socketBone[self.chainId + "_stretchTopBone"] = stretchTopName
+        socketBone[self.chainId + "_visibleST"] = True
+        
+        #ADD GENERAL BONE CUSTOM PROPERTIES
+        stretchTopBone = arm.pose.bones[stretchTopName]
+        stretchTopBone[self.chainId + "_chainSocket"] = pSocketBoneName
+        stretchTopBone[self.chainId + "_chainId"] = self.chainId  
+        
+        
+        #SET CUSTOM OBJECT
+        if bpy.context.scene.stretchControlObjects != '': 
+            stretchTopBone.custom_shape = bpy.data.objects[bpy.context.scene.stretchControlObjects]
+            stretchTopBone.use_custom_shape_bone_size = False
+                    
+        
+        bpy.ops.object.mode_set(mode=prevMode)
+        
+        return [stretchBoneName,stretchTopName]
+        
     #CREATE SOCKET BONE
     def createSocketBone(self, pSelBones):
         arm = bpy.data.objects[bpy.context.active_object.name]
@@ -824,7 +940,6 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             bpy.ops.object.mode_set(mode='POSE') 
             
             #-- DEF BONES CUSTOM PROPERTIES
-            
             for defBone in selBones:
                 arm.pose.bones[defBone][self.chainId + "_chainSocket"] = sockectBoneName
                 arm.pose.bones[defBone][self.chainId + "_chainId"] = self.chainId  
@@ -835,9 +950,25 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
                 lastIKBoneName = ikChain[len(ikChain)-1]
                 ikTargetName = self.getTargetIK(arm,lastIKBoneName)
             
+  
             #-- CREATE FK
             fkChain = self.createFKChain(chainLenght, sockectBoneName, ikTargetName, ikChain)
             lastFkBoneName = fkChain[len(fkChain)-1]
+            
+            if addIkChainOption == True and singleChain == False: 
+                #-- CREATE STRETCH BONE
+                stretchBones = self.createStretchBone(sockectBoneName, lastFkBoneName, ikTargetName)
+                stretchBoneName = stretchBones[0]
+                stretchTopName = stretchBones[1]
+                
+                moveBoneToLayer(arm, stretchBoneName, 30)
+                moveBoneToLayer(arm, stretchTopName, 1)
+            
+                #-- PARENT FK TO STRETCH BONE
+                if stretchBoneName != None:
+                    bpy.ops.object.mode_set(mode='EDIT')
+                    arm.data.edit_bones[fkChain[0]].parent = arm.data.edit_bones[stretchBoneName]
+                
             
             # -- CREATE FREE CONTROLS
             if singleChain == False:
@@ -851,6 +982,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             
             #-- MOVE BONES LAYER                
             self.moveChainToBoneLayer(arm, selBones, 0)
+            
 
             #CREATE DEF CUSTOM VARIABLES
             bpy.ops.object.mode_set(mode='POSE')
@@ -868,8 +1000,11 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             bpy.ops.object.mode_set(mode='OBJECT')
             bpy.ops.object.mode_set(mode='POSE')
             
-            #PARENT TO SOCKET
-            self.parentToSocket(arm, sockectBoneName, fkChain, True)
+            
+            
+            #PARENT IK TO SOCKET
+            #self.parentToSocket(arm, sockectBoneName, fkChain, True)
+              
             if ikChain != None:
                 self.parentToSocket(arm, sockectBoneName, ikChain, True)
             
@@ -1422,10 +1557,16 @@ class VTOOLS_OP_RS_snapFKIK(bpy.types.Operator):
         arm = bpy.context.active_object
         fkChain = getFKChain()
         ikChain = getIKChain()
+        ikTarget = getIkTarget()
+        stretchControl = getStretchControl()
         
-        for i in range(0,len(fkChain)):
-            bpy.ops.object.mode_set(mode='POSE')
-            arm.pose.bones[fkChain[i]].matrix = arm.pose.bones[ikChain[i]].matrix
+        if ikTarget != None:
+            arm.pose.bones[stretchControl].matrix = arm.pose.bones[ikTarget].matrix
+        
+            for i in range(0,len(fkChain)):
+                bpy.ops.object.mode_set(mode='POSE')
+                arm.pose.bones[fkChain[i]].matrix = arm.pose.bones[ikChain[i]].matrix
+                
                   
         return {'FINISHED'}
 
@@ -1527,12 +1668,16 @@ class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
             #box.prop(activeBone.ikfksolver, "ikchainLenght" , text = "Chain lenght", emboss = True)
             
             box = layout.box()
+            box.label(text="Display As")
+            box.prop(bpy.context.object.data, "display_type", text="")
+            box = layout.box()
             box.label(text="Controls Custom Shapes")
             box.prop_search(bpy.context.scene, "fkikRoot", bpy.context.object.data, "bones", text="Root")
             box.prop_search(bpy.context.scene, "socketControlObjects", bpy.data, "objects", text="Socket Shape")
             box.prop_search(bpy.context.scene, "fkControlObjects", bpy.data, "objects", text="FK Shape")
             box.prop_search(bpy.context.scene, "ikControlObjects", bpy.data, "objects", text="IK Shape")
             box.prop_search(bpy.context.scene, "fkFreeControlObjects", bpy.data, "objects", text="FK Free Shape")
+            box.prop_search(bpy.context.scene, "stretchControlObjects", bpy.data, "objects", text="Stretch Shape")
             #box.prop_search(bpy.context.scene, "stretchControlObjects", bpy.data, "objects", text="Stretch Shape")
             
             box = layout.box()
@@ -1612,6 +1757,8 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     #box.label(text="Visibility")
                     col = box.column(align=True)
                     col.prop(bpy.context.object,"ikFkAffectAllChains", text="All Chains", toggle = True)
+                    
+                    
                     row = col.row(align=True)
                     
                     
@@ -1629,19 +1776,21 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                         op.action = "SK"
                         op.visibility = visible
                         
-                        
-                    visibleIK = findCustomProperty(socketBone, "visibleIK")
-                    if visibleIK != "":
-                        if socketBone[visibleIK] == 1:
+                    visibleSK = findCustomProperty(socketBone, "visibleST")
+                    if visibleSK != "":
+                        if socketBone[visibleSK] == 1:
                             opIcon = "HIDE_OFF"
                             visible = True
                         else:
                             opIcon = "HIDE_ON"
                             visible = False
-                            
-                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="IK", icon=opIcon)
-                        op.action = "IK"
+                        
+                        
+                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="ST", icon=opIcon)
+                        op.action = "ST"
                         op.visibility = visible
+                        
+                        
                     
                     row = col.row(align=True)
                     
@@ -1674,6 +1823,21 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                         op.action = "FR"
                         op.visibility = visible
                     
+                    row = col.row(align=True)
+                    visibleIK = findCustomProperty(socketBone, "visibleIK")
+                    if visibleIK != "":
+                        if socketBone[visibleIK] == 1:
+                            opIcon = "HIDE_OFF"
+                            visible = True
+                        else:
+                            opIcon = "HIDE_ON"
+                            visible = False
+                            
+                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="IK", icon=opIcon)
+                        op.action = "IK"
+                        op.visibility = visible
+                        
+                        
                     #CONTROL BOX
                     box = layout.box()
                     
@@ -1750,6 +1914,7 @@ def register_rigsystem():
     bpy.types.Scene.ikControlObjects = bpy.props.StringProperty()
     bpy.types.Scene.stretchControlObjects = bpy.props.StringProperty()
     bpy.types.Scene.socketControlObjects = bpy.props.StringProperty()
+    bpy.types.Scene.stretchControlObjects = bpy.props.StringProperty()
     bpy.types.Scene.fkikRoot = bpy.props.StringProperty()
     
     bpy.types.Scene.isHumanoidChain = bpy.props.BoolProperty(default = True)
@@ -1780,6 +1945,7 @@ def unregister_rigsystem():
     del bpy.types.Scene.ikControlObjects
     del bpy.types.Scene.stretchControlObjects
     del bpy.types.Scene.socketControlObjects
+    del bpy.types.Scene.stretchControlObjects
     del bpy.types.Scene.fkikRoot
     del bpy.types.Scene.addIkChain
     del bpy.types.Scene.childChainSocket
