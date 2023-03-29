@@ -273,7 +273,6 @@ def getSelectedChain(pArm):
     
     #-- EXTRACT ORDERED BONE NAMES
     
-    print ("PRE SELECT ", selBones)
     for b in selBones:
         tmp_b = b
         cont = 0
@@ -286,8 +285,7 @@ def getSelectedChain(pArm):
                 break
             
         boneChainNames[cont] = b.name
-    
-    print("SELECTED BONES ", boneChainNames)
+
     return boneChainNames
 
 def duplicateBone(pNewBoneName, pArm, pBoneName, pParenting):
@@ -546,18 +544,24 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         
         selectedBones = bpy.context.selected_pose_bones
         currentBone = pBone
-        while last == None:
-            if len(currentBone.children) == 0:
+        
+        cont = -1
+        while last == None and cont < len(selectedBones):
+            
+            cont += 1
+            if len(currentBone.children) == 0 and currentBone in selectedBones:
                 last = currentBone
             else:
+                endBone = True
                 for c in currentBone.children: #LOOK IN CHILDRENS
                     if c in selectedBones: #IF CHILDREN IN SELECTED BONES, CONTINUE
                         currentBone = c
-                        break
-                    else:
-                        last = c
-                        break
-                        
+                        endBone = False
+                
+                if endBone == True:
+                    last = currentBone
+                
+                
         return last
                 
     def getSelectedChains(self):
@@ -597,9 +601,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         chains = self.getSelectedChains()
         
         #print("ENTRA -------------------- ", chains)
-        
-        print("CHAINS ", chains)
-        """
+
         for c in chains:
             bpy.ops.object.mode_set(mode='POSE')
             
@@ -618,13 +620,11 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             socketBoneName = self.createIKFKChain()
             
             #APLICA EL ROTATION MODE
-
             #bpy.ops.vtoolsrigsystem.setrotationmode(rotationMode=rotMode)
             
             #ADD CHAIN TO UI
             #rigUI.rigUIAddChain(arm.name, socketBoneName)
-            
-        """
+                   
         
         return {'FINISHED'}
         
@@ -723,12 +723,12 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             
             
             #SET CUSTOM OBJECT
-            if bpy.context.scene.fkFreeControlObjects != '':
-                arm.pose.bones[sockectBoneName].custom_shape = bpy.data.objects[bpy.context.scene.fkFreeControlObjects]
+            if bpy.context.scene.socketControlObjects != '':
+                arm.pose.bones[sockectBoneName].custom_shape = bpy.data.objects[bpy.context.scene.socketControlObjects]
                 arm.pose.bones[sockectBoneName].use_custom_shape_bone_size = False
-                arm.pose.bones[sockectBoneName].custom_shape_scale_xyz[0] = 2
-                arm.pose.bones[sockectBoneName].custom_shape_scale_xyz[1] = 2
-                arm.pose.bones[sockectBoneName].custom_shape_scale_xyz[2] = 2
+                #arm.pose.bones[sockectBoneName].custom_shape_scale_xyz[0] = 2
+                #arm.pose.bones[sockectBoneName].custom_shape_scale_xyz[1] = 2
+                #arm.pose.bones[sockectBoneName].custom_shape_scale_xyz[2] = 2
                 
         """
         #REMOVE PARENT
@@ -776,6 +776,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         singleChain = False
         chainEndBoneName = None
         lastFreeBoneName = None
+        addIkChainOption = bpy.context.scene.addIkChain
 
 
         #IGNORE USED BONES
@@ -797,7 +798,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             singleChain = True
         
         if lenSelBones < 3 or self.rootInSelected(selBones) == True:
-            bpy.context.scene.addIkChain = False
+            addIkChainOption = False
         
         #CANCEL INHERIT SCALE
         bpy.ops.object.mode_set(mode='EDIT')
@@ -829,7 +830,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
                 arm.pose.bones[defBone][self.chainId + "_chainId"] = self.chainId  
             
             #-- CREATE IK
-            if bpy.context.scene.addIkChain == True and singleChain == False:
+            if addIkChainOption == True and singleChain == False:
                 ikChain = self.createIKChain(chainLenght, sockectBoneName)
                 lastIKBoneName = ikChain[len(ikChain)-1]
                 ikTargetName = self.getTargetIK(arm,lastIKBoneName)
@@ -1459,12 +1460,18 @@ class VTOOLS_OP_RS_setRotationMode(bpy.types.Operator):
     bl_description = "Set the rotation mode to all bones within the chain"
     
     rotationMode : StringProperty
+    affectAll : bpy.props.BoolProperty(default=False)
     
     def execute(self, context):
         arm = bpy.context.active_object
         socketBone = getChainSocketBone(bpy.context.active_pose_bone)
-        if socketBone != None:    
-            setRotationMode(arm.pose.bones[socketBone.name].rotation_mode)     
+        if socketBone != None:
+            rotMode = arm.pose.bones[socketBone.name].rotation_mode
+            if self.affectAll == False:    
+                setRotationMode(rotMode)     
+            else:
+                for b in arm.pose.bones:
+                    b.rotation_mode = rotMode
             
         return {'FINISHED'}
 
@@ -1522,6 +1529,7 @@ class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
             box = layout.box()
             box.label(text="Controls Custom Shapes")
             box.prop_search(bpy.context.scene, "fkikRoot", bpy.context.object.data, "bones", text="Root")
+            box.prop_search(bpy.context.scene, "socketControlObjects", bpy.data, "objects", text="Socket Shape")
             box.prop_search(bpy.context.scene, "fkControlObjects", bpy.data, "objects", text="FK Shape")
             box.prop_search(bpy.context.scene, "ikControlObjects", bpy.data, "objects", text="IK Shape")
             box.prop_search(bpy.context.scene, "fkFreeControlObjects", bpy.data, "objects", text="FK Free Shape")
@@ -1547,10 +1555,11 @@ class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
                 box = layout.box()
                 box.label(text="Rotation Mode")
                 box.label(text="Selected: " + activeBone.rotation_mode)
-                row = box.row()
-                row.prop(data, "rotation_mode", text="")
-                row.operator(VTOOLS_OP_RS_setRotationMode.bl_idname, text="", icon="LINKED")
-
+                box.prop(data, "rotation_mode", text="")
+                row = box.row(align=True)
+                row.operator(VTOOLS_OP_RS_setRotationMode.bl_idname, text="Selected", icon="LINKED")
+                op = row.operator(VTOOLS_OP_RS_setRotationMode.bl_idname, text="All", icon="LINKED")
+                op.affectAll = True
 
                 ikDriverProperty = findCustomProperty(data, "ikDriver")
                 if ikDriverProperty != "":
@@ -1740,6 +1749,7 @@ def register_rigsystem():
     bpy.types.Scene.fkFreeControlObjects = bpy.props.StringProperty()
     bpy.types.Scene.ikControlObjects = bpy.props.StringProperty()
     bpy.types.Scene.stretchControlObjects = bpy.props.StringProperty()
+    bpy.types.Scene.socketControlObjects = bpy.props.StringProperty()
     bpy.types.Scene.fkikRoot = bpy.props.StringProperty()
     
     bpy.types.Scene.isHumanoidChain = bpy.props.BoolProperty(default = True)
@@ -1769,6 +1779,7 @@ def unregister_rigsystem():
     del bpy.types.Scene.fkFreeControlObjects
     del bpy.types.Scene.ikControlObjects
     del bpy.types.Scene.stretchControlObjects
+    del bpy.types.Scene.socketControlObjects
     del bpy.types.Scene.fkikRoot
     del bpy.types.Scene.addIkChain
     del bpy.types.Scene.childChainSocket
