@@ -14,6 +14,16 @@ from bpy_extras.io_utils import ImportHelper
 
 #--- DEF GLOBAL --- #
 
+def moveAlognDirection(pBasePos, pVector1, pVector2):
+    
+    newPosition = pBasePos
+    direction = pVector1 - pVector2
+    
+    newPosition = direction
+            
+    return newPosition
+
+            
 def getSelectedBoneNames():
     
     selectedBoneNameList = []
@@ -25,7 +35,8 @@ def getSelectedBoneNames():
 
 def setChainVisibility(pSocketBoneName, pVisible, pType, pUsedSocketList):
     
-    arm = bpy.context.object    
+    arm = bpy.context.object
+    activeBoneName = bpy.context.active_bone.name    
     socketBoneName = pSocketBoneName
     
     if socketBoneName not in pUsedSocketList:
@@ -70,9 +81,8 @@ def setChainVisibility(pSocketBoneName, pVisible, pType, pUsedSocketList):
                 socketBone = arm.pose.bones[socketBoneName]
                 socketBone.bone.hide = pVisible
                 socketBone.bone.select = pVisible
-                
-                if pVisible == False:
-                    arm.data.bones.active = bpy.context.object.data.bones[socketBoneName]
+
+        arm.data.bones.active = bpy.context.object.data.bones[activeBoneName]
                 
         
     return socketBoneName
@@ -699,7 +709,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         return newBoneName
 
     # CREATE STRETCH BONE
-    def createStretchBone(self, pSocketBoneName, pLastFkBoneName, pIKTargetName):
+    def createStretchBone(self, pSocketBoneName, pLastFkBoneName, pIKTargetName, pIsSingleChain):
         
         arm = bpy.context.object
         stretchBoneName = None
@@ -711,13 +721,28 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         
         #CREATE STRETCH BONE (NEW BONE)
         editBones = arm.data.edit_bones
-        stretchBoneName = self.createNewBone(arm, newBoneName, editBones[pSocketBoneName].head, editBones[pLastFkBoneName].head, False, pSocketBoneName, False)
-        
+        if pIsSingleChain == False:
+            stretchBoneName = self.createNewBone(arm, newBoneName, editBones[pSocketBoneName].head, editBones[pLastFkBoneName].head, False, pSocketBoneName, False)
+        else:
+            stretchBoneName = self.createNewBone(arm, newBoneName, editBones[pSocketBoneName].head, editBones[pLastFkBoneName].tail, False, pSocketBoneName, False)
+            
         #CRATE TOP STRETCH (DUPLCIATE FK TO MAINTAIN IK CONSTRAINT)
         newTopName = pSocketBoneName.replace("SOCKETCHAIN-", "STRETCHTOP-")
         stretchTopName = duplicateBone(newTopName, arm, pLastFkBoneName , False)
-        arm.data.edit_bones[stretchTopName].use_connect = False
-        arm.data.edit_bones[stretchTopName].parent = arm.data.edit_bones[pSocketBoneName]
+        
+        stretchTopBone = arm.data.edit_bones[stretchTopName]
+        stretchTopBone.use_connect = False
+        stretchTopBone.parent = arm.data.edit_bones[pSocketBoneName]
+        
+        
+        #IF SINGLE CHAIN MOVE STRETCH TOP BONE
+        if pIsSingleChain:
+            #print("is single")
+            stretchTopBone.head = stretchTopBone.tail
+            newPosition = moveAlognDirection(stretchTopBone.tail.copy(), editBones[pSocketBoneName].head.copy(), stretchTopBone.tail.copy())
+            print("New Position ", newPosition)
+            stretchTopBone.tail -= newPosition
+        
         
         #ADD STRETCH CONSTRAINT
         bpy.ops.object.mode_set(mode='POSE')
@@ -837,6 +862,13 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             tCons.influence = 1
             tCons.enabled = False
             
+            #CREATE EIGGLE CONTROL
+            bpy.ops.object.mode_set(mode='POSE')  
+            tCons = arm.pose.bones[sockectBoneName].constraints.new('COPY_TRANSFORMS')
+            tCons.name = "WiggleControl"
+            tCons.influence = 0
+            tCons.enabled = False
+            
             
             #SET CUSTOM OBJECT
             if bpy.context.scene.socketControlObjects != '':
@@ -894,7 +926,8 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         lastFreeBoneName = None
         addIkChainOption = bpy.context.scene.addIkChain
 
-
+        print("CREATE IK FK")
+        
         #IGNORE USED BONES
         self.ignoreUsedBones(arm)
         
@@ -955,20 +988,26 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             fkChain = self.createFKChain(chainLenght, sockectBoneName, ikTargetName, ikChain)
             lastFkBoneName = fkChain[len(fkChain)-1]
             
-            if addIkChainOption == True and singleChain == False: 
-                #-- CREATE STRETCH BONE
-                stretchBones = self.createStretchBone(sockectBoneName, lastFkBoneName, ikTargetName)
-                stretchBoneName = stretchBones[0]
-                stretchTopName = stretchBones[1]
+            #if addIkChainOption == True and singleChain == False: 
                 
-                moveBoneToLayer(arm, stretchBoneName, 30)
-                moveBoneToLayer(arm, stretchTopName, 1)
+            #-- CREATE STRETCH BONE
+            if singleChain == False:
+                stretchBones = self.createStretchBone(sockectBoneName, lastFkBoneName, ikTargetName, singleChain)
+                
+            else:
+                stretchBones = self.createStretchBone(sockectBoneName, fkChain[0], None, singleChain)
+                
+            stretchBoneName = stretchBones[0]
+            stretchTopName = stretchBones[1]
             
-                #-- PARENT FK TO STRETCH BONE
-                if stretchBoneName != None:
-                    bpy.ops.object.mode_set(mode='EDIT')
-                    arm.data.edit_bones[fkChain[0]].parent = arm.data.edit_bones[stretchBoneName]
-                
+            moveBoneToLayer(arm, stretchBoneName, 30)
+            moveBoneToLayer(arm, stretchTopName, 1)
+        
+            #-- PARENT FK TO STRETCH BONE
+            if stretchBoneName != None:
+                bpy.ops.object.mode_set(mode='EDIT')
+                arm.data.edit_bones[fkChain[0]].parent = arm.data.edit_bones[stretchBoneName]
+            
             
             # -- CREATE FREE CONTROLS
             if singleChain == False:
@@ -1455,9 +1494,9 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
                 arm.pose.bones[o][self.chainId + "_chainSocket"] = pSockectBoneName
                 arm.pose.bones[o][self.chainId + "_chainId"] = self.chainId
                 
+                
                 #CONSTRAINT TO IK
                 if pIKChain != None:
-                    bpy.ops.object.mode_set(mode="POSE") 
                     tCons = arm.pose.bones[o].constraints.new('COPY_TRANSFORMS')
                     tCons.name = "IK_TRANSFORM"
                     tCons.target = arm
@@ -1476,6 +1515,30 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
                     tmpV.targets[0].id_type = 'OBJECT'
                     tmpV.targets[0].id = bpy.data.objects[arm.name]
                     tmpV.targets[0].data_path = "pose.bones[\""+pSockectBoneName+"\"].constraints[\"IKControl\"].influence"
+                    
+                
+                #WIGGLE CONTRAINT
+                bpy.ops.object.mode_set(mode="POSE") 
+                if i < len(newChain)-1:
+                    tCons = arm.pose.bones[o].constraints.new('DAMPED_TRACK')
+                    tCons.name = "FK_WIGGLE"
+                    tCons.target = arm
+                    tCons.subtarget = newChain[i+1]
+                    tCons.track_axis = "TRACK_Y"
+                    tCons.target_space = 'WORLD'
+                    tCons.owner_space = 'WORLD'
+                    tCons.influence = 0.5
+                    
+                    #SET WIGGLE DRIVER
+                    tmpD = tCons.driver_add("influence")
+                    tmpD.driver.type = 'SCRIPTED'
+                    tmpD.driver.expression = "wiggleControl"
+                    
+                    tmpV = tmpD.driver.variables.new()
+                    tmpV.name = "wiggleControl"
+                    tmpV.targets[0].id_type = 'OBJECT'
+                    tmpV.targets[0].id = bpy.data.objects[arm.name]
+                    tmpV.targets[0].data_path = "pose.bones[\""+pSockectBoneName+"\"].constraints[\"WiggleControl\"].influence"
                     
                 
             bpy.ops.object.mode_set(mode='POSE')            
@@ -1822,7 +1885,7 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                         op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="FR", icon=opIcon)
                         op.action = "FR"
                         op.visibility = visible
-                    
+                        
                     row = col.row(align=True)
                     visibleIK = findCustomProperty(socketBone, "visibleIK")
                     if visibleIK != "":
@@ -1832,10 +1895,15 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                         else:
                             opIcon = "HIDE_ON"
                             visible = False
-                            
+                        
+                          
                         op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="IK", icon=opIcon)
                         op.action = "IK"
                         op.visibility = visible
+                    else:
+                        row.enabled = False
+                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="IK")
+                        
                         
                         
                     #CONTROL BOX
@@ -1866,7 +1934,19 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     if socketBone.constraints.find("maintainVolumeC") != -1:
                         col.prop(socketBone.constraints["maintainVolumeC"], "influence", text="Maintain Volume", emboss = True)
                     
-                   
+                    if socketBone.constraints.find("WiggleControl") != -1:
+                        col.prop(socketBone.constraints["WiggleControl"], "influence", text="Follow", emboss = True)
+                    
+                    #IF WIGGLE ADDON ACTIVE
+                    col = box.column(align=True) 
+                    if hasattr(activeBone, "jiggle_enable") == True:
+                        col.prop(activeBone, "jiggle_enable",emboss = True, toggle=True, text="Wiggle")
+                        if activeBone.jiggle_enable == True:
+                            col.prop(activeBone, "jiggle_stiffness",emboss = True, toggle=True, text="Stiff")
+                            col.prop(activeBone, "jiggle_dampen",emboss = True, toggle=True, text="Dampen")
+                            col.prop(activeBone, "jiggle_translation",emboss = True, toggle=True, text="Translation")
+                            col.prop(activeBone, "jiggle_amplitude",emboss = True, toggle=True, text="Rotation")
+                    
 
 
 #---------- CLASES ----------#
