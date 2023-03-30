@@ -40,6 +40,13 @@ def register():
     
     from .boneTools import register_bonetools
     register_bonetools()
+    
+    from .spriteSystem import register_spriteSystem
+    register_spriteSystem()
+    
+    from .skinSystem import register_skinSystem
+    register_skinSystem()
+    
 
 def unregister():
 
@@ -51,6 +58,12 @@ def unregister():
     
     from .boneTools import unregister_bonetools
     unregister_bonetools()
+    
+    from .spriteSystem import unregister_spriteSystem
+    unregister_spriteSystem()
+    
+    from .skinSystem import unregister_skinSystem
+    unregister_skinSystem()
     
     for c in classes:
         bpy.utils.unregister_class(c)
