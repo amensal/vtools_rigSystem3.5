@@ -76,22 +76,19 @@ def duplicateBone(pNewBoneName, pArm, pBoneName, pParenting, pDeform):
              
     return newBoneName
 
-def setFCurveInterpolation(pObjName, pBone, pInterpolationType ):
+def setFCurveInterpolation(pArm, pBoneName, pInterpolationType ):
     
-    pDataPath = pBone.name
-    obj = bpy.data.objects[pObjName]
-    if obj.parent != None:
-        arm = obj.parent
-        vBone = pBone
-        if arm.animation_data != None:
-            ac = arm.animation_data.action
-            if ac != None:
-                for fc in ac.fcurves:
-                    if fc.lock == False:
-                        if fc.data_path.find(pDataPath) != -1:
-                            for k in fc.keyframe_points:
-                                k.interpolation = pInterpolationType
-                                k.easing = 'AUTO'
+    pDataPath = pBoneName
+    arm = pArm
+    if arm.animation_data != None:
+        ac = arm.animation_data.action
+        if ac != None:
+            for fc in ac.fcurves:
+                if fc.lock == False:
+                    if fc.data_path.find(pDataPath) != -1:
+                        for k in fc.keyframe_points:
+                            k.interpolation = pInterpolationType
+                            k.easing = 'AUTO'
                 
 
 def selectBonesByName(pObjectName, pArm, pWildCardName):

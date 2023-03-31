@@ -231,7 +231,7 @@ def addSpriteControlBone(pArmName, pObjName):
             break
         
     if boneFound == False:
-        spriteBone = armUtils.createNewNode(arm, newBoneName, (0,0,0), (0,0,1), False)
+        spriteBone = armUtils.createNewBone(arm, newBoneName, (0,0,0), (0,0,1), False)
     else:
         print("bone found")
     
@@ -377,16 +377,20 @@ class VTOOLS_MT_textureImageNodes(bpy.types.Menu):
 
 
     def draw(self, context):
-        obj = bpy.context.object
+        arm = bpy.context.object
         
         layout = self.layout
         layout.operator_context = "EXEC_DEFAULT";
         
-        textureNodes = findNodeListByType(obj.name, "TEX_IMAGE")
-        for tnName in textureNodes:
-            tn = obj.data.materials[0].node_tree.nodes[tnName]
-            op = layout.operator(VTOOLS_OT_createSprite.bl_idname, text=tn.image.name) 
-            op.selectedTexNode = tn.image.name    
+        for obj in bpy.context.selected_objects:
+            if obj.type == "MESH":
+                textureNodes = findNodeListByType(obj.name, "TEX_IMAGE")
+                for tnName in textureNodes:
+                    tn = obj.data.materials[0].node_tree.nodes[tnName]
+                    if tn.image != None:
+                        op = layout.operator(VTOOLS_OT_createSprite.bl_idname, text=tn.image.name) 
+                        op.selectedTexNode = tn.image.name
+                        op.targetObjectName = obj.name
     
 # ---------- OPERATORS ---------------------------- #
 
@@ -398,14 +402,21 @@ class VTOOLS_OT_createSprite(bpy.types.Operator):
     bl_options = {'REGISTER', 'PRESET', 'UNDO'}
     
     selectedTexNode : bpy.props.StringProperty(default="")
-
+    targetObjectName : bpy.props.StringProperty(default="")
+    
     def execute(self, context):
-        obj = bpy.context.object
+        
+        
+        
+        if self.targetObjectName != "" and bpy.data.objects.find(self.targetObjectName) != -1:
+            
+            print("CREATE SPRITE")
+            obj = bpy.data.objects[self.targetObjectName]
+            arm = obj.parent
 
-        if bpy.context.object.type == "MESH" and bpy.context.object.parent != None:
-            if bpy.context.object.parent.type == "ARMATURE":
-                objName = bpy.context.object.name
-                spArmName = obj.parent.name
+            if obj.type == "MESH" and arm.type == "ARMATURE":
+                objName = obj.name
+                spArmName = arm.name
 
                 #FIND SHADER AND TEXTURE NODE
                 print("TEX SEL: ", self.selectedTexNode)
@@ -475,6 +486,7 @@ class VTOOLS_OT_spriteAutokey(bpy.types.Operator):
         obj = bpy.context.object
         objName = obj.name
         spriteBone = getSpriteControlBone(obj.name)
+        arm = obj.parent
         
         #REMOVE ANIMATION DATA 
         
@@ -505,7 +517,7 @@ class VTOOLS_OT_spriteAutokey(bpy.types.Operator):
                 
                 insertFrame += step
                 
-        armUtils.setFCurveInterpolation(objName,  spriteBone, "CONSTANT")        
+        armUtils.setFCurveInterpolation(arm,  spriteBone.name, "CONSTANT")        
             
         return {'FINISHED'}
  
@@ -641,7 +653,7 @@ class VTOOLS_PT_importSprite(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return (context)
+        return (context.object.type == "MESH")
     
     def draw(self,context):
         tex = None
@@ -659,8 +671,6 @@ class VTOOLS_PT_importSprite(bpy.types.Panel):
                     if bpy.data.textures.find(textureName) != -1:
                         
                         row = layout.row(align=True)
-                        
-                        
                         op = row.operator(VTOOLS_OT_createSprite.bl_idname, text="Reset Sprite")
                         op.selectedTexNode = obj["vtsp_image"]
                         row.operator(VTOOLS_OT_deleteSprite.bl_idname, text="Delete Sprite")
@@ -671,7 +681,7 @@ class VTOOLS_PT_importSprite(bpy.types.Panel):
                         if tex != None:
                             
                             box1.template_ID(texNode, "image")
-                            box1.operator(VTOOLS_OT_setSpriteImage.bl_idname, text="Set Image")
+                            box1.operator(VTOOLS_OT_setSpriteImage.bl_idname, text="Reload Image")
                             
                         if tex != None:
                             
@@ -750,30 +760,84 @@ class VTOOLS_PT_importSprite(bpy.types.Panel):
                     else:
                         layout.menu("VTOOLS_MT_textureImageNodes")
                 else:
-                    layout.label(text="Create Sprite Material")
+                    #layout.label(text="Create Sprite Material")
                     #layout.template_ID(obj, "active_material", new="material.new")
+                    #layout.label(text="Update ")
+                    layout.menu("VTOOLS_MT_textureImageNodes")
                     
             else:
                 layout.menu("VTOOLS_MT_textureImageNodes")
                 #layout.operator(VTOOLS_OT_selectTexImageNode.bl_idname, text="1 - Set Sprite")
                 #layout.operator(VTOOLS_OT_createSprite.bl_idname, text="Set as Sprite")
                 
+
+# ------------ UI LIST --------------------#
+
+class VTOOLS_UL_vtRigSprites(bpy.types.UIList):
+    
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
+        
+        arm = bpy.context.object
+        visBone = arm.pose.bones[item.visibilityBoneName]
+        
+        if visBone != None:
+            row = layout.row(align=True)
+            
+            visIcon = "HIDE_ON"
+            if visBone.location.y > 0:
+                visIcon = "HIDE_OFF"
+            
+            row.label(text="", icon=visIcon)
+            row.prop(item, "spriteName", text="", emboss=False) 
+            row.prop(item, "spriteBoneName", text="", emboss=False) 
+            """
+            row = layout.row()
+            row.scale_x = 0.4
+            row.prop(visBone, "location", index=1, text="", slider=True)
+            """
+
+    def filter_items(self, context, data, propname):        
+        collec = getattr(data, propname)
+        helper_funcs = bpy.types.UI_UL_list
+        flt_flags = []
+        flt_neworder = []
+        if self.filter_name:
+            flt_flags = helper_funcs.filter_items_by_name(self.filter_name, self.bitflag_filter_item, collec, "objectName",
+                                                          reverse=self.use_filter_sort_reverse)
+        return flt_flags, flt_neworder
+
+
+        
+class VTOOLS_CC_vtRigSpritesCollection(bpy.types.PropertyGroup):
+       
+    spriteName : bpy.props.StringProperty(default='')
+    spriteBoneName: bpy.props.StringProperty(default='')
          
 # ------------- REGISTER ---------------------#
 
 classes = (
-    VTOOLS_OT_createSprite, VTOOLS_PT_importSprite, VTOOLS_OT_setSpriteImage,VTOOLS_OT_moveSpriteControlBone, VTOOLS_OT_spriteAutokey, VTOOLS_OT_selectSpriteControlBones, VTOOLS_OT_calculateSpriteAnimationStep, VTOOLS_OT_deleteSprite, VTOOLS_MT_textureImageNodes, 
+    VTOOLS_OT_createSprite, VTOOLS_PT_importSprite, VTOOLS_OT_setSpriteImage,
+    VTOOLS_OT_moveSpriteControlBone, VTOOLS_OT_spriteAutokey,
+    VTOOLS_OT_selectSpriteControlBones, VTOOLS_OT_calculateSpriteAnimationStep,
+    VTOOLS_OT_deleteSprite, VTOOLS_MT_textureImageNodes,
+    VTOOLS_UL_vtRigSprites, VTOOLS_CC_vtRigSpritesCollection,  
      )
 
 
 def register_spriteSystem():
     for cls in classes:
         bpy.utils.register_class(cls)
+    
+    bpy.types.Object.vtRigSpritesCollection = bpy.props.CollectionProperty(type=VTOOLS_CC_vtRigSpritesCollection)
+    bpy.types.Object.vtRigSpritesCollection_ID = bpy.props.IntProperty(default = -1)
 
 
 def unregister_spriteSystem():
     for cls in classes:
         bpy.utils.unregister_class(cls)
+    
+    del bpy.types.Object.vtRigSpritesCollection
+    del bpy.types.Object.vtRigSpritesCollection_ID
 
 
 if __name__ == "__main__":

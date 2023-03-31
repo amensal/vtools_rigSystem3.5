@@ -1722,7 +1722,10 @@ class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
     bl_category = 'Tool'
     bl_options = {'DEFAULT_CLOSED'}
     
-
+    @classmethod
+    def poll(cls, context):
+        return (context.object.type == "ARMATURE")
+    
     def draw(self, context):
         layout = self.layout 
         activeBone = context.active_pose_bone
@@ -1789,6 +1792,9 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
     bl_category = 'Tool'
     bl_options = {'DEFAULT_CLOSED'}
     
+    @classmethod
+    def poll(cls, context):
+        return (context.object.type == "ARMATURE")
 
     def draw(self, context):
         

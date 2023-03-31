@@ -13,7 +13,7 @@ class VTOOLS_PT_boneTools(bpy.types.Panel):
         
     @classmethod
     def poll(cls, context):
-        return (context.object)
+        return (context.object.type == "ARMATURE")
     
     def draw(self,context):
         
