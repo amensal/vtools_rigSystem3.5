@@ -1132,7 +1132,16 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             if pFreeChain != None:
                 if bcont < len(pFreeChain)-1:
                     #FREE STRETCH
+                    """
                     tCons = pb.constraints.new('COPY_LOCATION')
+                    tCons.name = "FreeChain_Location"
+                    tCons.target = arm
+                    tCons.subtarget = arm.pose.bones[pFreeChain[bcont]].name
+                    tCons.target_space = 'WORLD'
+                    tCons.owner_space = 'WORLD'
+                    tCons.influence = 1
+                    """
+                    tCons = pb.constraints.new('COPY_TRANSFORMS')
                     tCons.name = "FreeChain_Location"
                     tCons.target = arm
                     tCons.subtarget = arm.pose.bones[pFreeChain[bcont]].name
