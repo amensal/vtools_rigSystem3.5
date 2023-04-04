@@ -1724,7 +1724,10 @@ class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
     
     @classmethod
     def poll(cls, context):
-        return (context.object.type == "ARMATURE")
+        ret = False
+        if context.object:
+           ret =  context.object.type == "ARMATURE"
+        return ret
     
     def draw(self, context):
         layout = self.layout 
@@ -1794,7 +1797,10 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
     
     @classmethod
     def poll(cls, context):
-        return (context.object.type == "ARMATURE")
+        ret = False
+        if context.object:
+           ret =  context.object.type == "ARMATURE"
+        return ret
 
     def draw(self, context):
         
@@ -1824,22 +1830,44 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     box = layout.box()
                     
                     #box.label(text="Visibility")
-                    col = box.column(align=True)
-                    col.prop(bpy.context.object,"ikFkAffectAllChains", text="All Chains", toggle = True)
+                    mainRow = box.row()
+                    col = mainRow.column(align=True)
+                    col.prop(bpy.context.object,"ikFkAffectAllChains", text="All Armature", toggle = True)
                     
+                    row = col.row(align=True)
+                    row.prop(bpy.context.object.vtRigChains,"fkchain", text="FK", toggle = True)
+                    row.prop(bpy.context.object.vtRigChains,"ikchain", text="IK", toggle = True)
+                    row = col.row(align=True)
+                    row.prop(bpy.context.object.vtRigChains,"freechain", text="FR", toggle = True)
+                    row.prop(bpy.context.object.vtRigChains,"stretchbone", text="ST", toggle = True)
+                    row = col.row(align=True)
+                    row.prop(bpy.context.object.vtRigChains,"socketbone", text="SK", toggle = True)
+                    row.prop(bpy.context.object.vtRigChains,"defchain", text="ST", toggle = True)
                     
+                    col = mainRow.column(align=True)
+                    op = col.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="", icon="HIDE_OFF")
+                    op.visibility = True
+                    op = col.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="", icon="HIDE_ON")
+                    op.visibility = False
+                    
+                    op = col.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="", icon="EYEDROPPER")
+                    op.visibility = False
+                    
+                    """
+                    col.separator()
+                    
+                    col = box.column()
                     row = col.row(align=True)
                     
                     
                     visibleSK = findCustomProperty(socketBone, "visibleSK")
                     if visibleSK != "":
                         if socketBone[visibleSK] == 1:
-                            opIcon = "HIDE_OFF"
+                            opIcon = ""
                             visible = True
                         else:
                             opIcon = "HIDE_ON"
                             visible = False
-                        
                         
                         op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="SK", icon=opIcon)
                         op.action = "SK"
@@ -1910,7 +1938,7 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                         row.enabled = False
                         op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="IK")
                         
-                        
+                    """    
                         
                     #CONTROL BOX
                     box = layout.box()
@@ -1952,30 +1980,24 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                             col.prop(activeBone, "jiggle_dampen",emboss = True, toggle=True, text="Dampen")
                             col.prop(activeBone, "jiggle_translation",emboss = True, toggle=True, text="Translation")
                             col.prop(activeBone, "jiggle_amplitude",emboss = True, toggle=True, text="Rotation")
+                            col.prop(activeBone, "jiggle_stretch",emboss = True, toggle=True, text="Stretch")
                     
 
 
 #---------- CLASES ----------#
 
 
-class VTOOLS_ikfksolver(bpy.types.PropertyGroup):
+class VTOOLS_vtChainsProps(bpy.types.PropertyGroup):
     
             
     #---------- PARAMETERS ----------#  
     
-    name = bpy.props.StringProperty(default="")
-    ikcontrol = bpy.props.FloatProperty(default=1.0, min=0.0, max = 1.0)
-    ikDriver = bpy.props.BoolProperty(default=False)
-    fkchain = bpy.props.StringProperty(default="")
-    ikchain = bpy.props.StringProperty(default="")
-    ikTarget = bpy.props.StringProperty(default="")
-    ikchainLenght = bpy.props.IntProperty(default=3, min=1, max = 10)
-    
-    fkDriver = bpy.props.BoolProperty(default=False)
-    fkLastBone = bpy.props.StringProperty(default="")
-    fkStretchBone = bpy.props.StringProperty(default="")
-    fkchainLen = bpy.props.IntProperty(default=3, min=1, max = 10)
-    chainSocket = bpy.props.StringProperty(default="")
+    fkchain : bpy.props.BoolProperty(default=True)
+    ikchain : bpy.props.BoolProperty(default=True)
+    socketbone : bpy.props.BoolProperty(default=True)
+    stretchbone : bpy.props.BoolProperty(default=True)
+    freechain : bpy.props.BoolProperty(default=True)
+    defchain : bpy.props.BoolProperty(default=True)
     
 
 
@@ -1985,6 +2007,8 @@ def register_rigsystem():
     
     bpy.utils.register_class(VTOOLS_PT_ikfkSetup)
     bpy.utils.register_class(VTOOLS_PT_ikfkControls)
+    
+    bpy.utils.register_class(VTOOLS_vtChainsProps)
     
     bpy.utils.register_class(VTOOLS_OP_RS_addArmature)
     bpy.utils.register_class(VTOOLS_OP_RS_createIK)
@@ -2011,13 +2035,16 @@ def register_rigsystem():
     
     #OBJECT PROPERTIES 
     bpy.types.Object.ikFkAffectAllChains = bpy.props.BoolProperty(default = True, description="(True) Affect all chains within the armature or (False) only from selected Bones")
- 
+    bpy.types.Object.vtRigChains =  bpy.props.PointerProperty(type=VTOOLS_vtChainsProps) 
+
+    
 def unregister_rigsystem():
     
     bpy.utils.unregister_class(VTOOLS_PT_ikfkSetup)
     bpy.utils.unregister_class(VTOOLS_PT_ikfkControls)
     
-    #unregister_class(VTOOLS_ikfksolver)
+    bpy.utils.unregister_class(VTOOLS_vtChainsProps)
+    
     bpy.utils.unregister_class(VTOOLS_OP_RS_addArmature)
     bpy.utils.unregister_class(VTOOLS_OP_RS_createIK)
     bpy.utils.unregister_class(VTOOLS_OP_RS_snapIKFK)
@@ -2039,8 +2066,10 @@ def unregister_rigsystem():
     del bpy.types.Scene.isHumanoidChain
     del bpy.types.Scene.addEndBone
     
+    
     #OBJECT PROPERTIES 
     del bpy.types.Object.ikFkAffectAllChains
+    del bpy.types.Object.vtRigChains 
 
     
 #---------- CLASES ----------#

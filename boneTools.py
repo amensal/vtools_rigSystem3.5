@@ -13,29 +13,32 @@ class VTOOLS_PT_boneTools(bpy.types.Panel):
         
     @classmethod
     def poll(cls, context):
-        return (context.object.type == "ARMATURE")
+        return (context.object)
     
     def draw(self,context):
         
         layout = self.layout
         
-        
-        layout.label(text="Armature Layers")
-        layout.prop(bpy.context.object.data, "layers", text="")
-        
-        
-        bone = bpy.context.active_pose_bone
-        if not bone:
-            bone = bpy.context.active_bone
-        
-        if context.mode == "POSE":   
-            row = layout.row()
-            row.label(text="", icon='BONE_DATA')
-            row.prop(bone, "name", text="")
-            layout.prop(bone, "parent")
-            layout.prop(bone, "custom_shape")
-            col = layout.column()
-            col.prop(bone, "custom_shape_scale_xyz")
+        if bpy.context.object.type == "ARMATURE":
+            
+            col = layout.column(align=True)
+            col.label(text="Display as")
+            col.prop(bpy.context.object.data, "display_type", text="")
+            col = layout.column(align=True)
+            col.label(text="Armature Layers")
+            col.prop(bpy.context.object.data, "layers", text="")
+             
+            
+            bone = bpy.context.active_pose_bone
+            if bone != None:
+                if context.mode == "POSE":   
+                    row = layout.row()
+                    row.label(text="", icon='BONE_DATA')
+                    row.prop(bone, "name", text="")
+                    layout.prop(bone, "parent")
+                    layout.prop(bone, "custom_shape")
+                    col = layout.column()
+                    col.prop(bone, "custom_shape_scale_xyz")
 
 # -- REGISTER -- #       
 

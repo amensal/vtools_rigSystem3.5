@@ -1,8 +1,15 @@
 import bpy
+import importlib
 import os
 #armUtils = bpy.data.texts["LIB_armatureUtils"].as_module()
 
-from vtools_rigsystem import LIB_armatureUtils
+if "LIB_armatureUtils" in locals():
+    importlib.reload(LIB_armatureUtils)
+else:
+    from vtools_rigsystem import LIB_armatureUtils
+    importlib.reload(LIB_armatureUtils)
+
+
 armUtils = LIB_armatureUtils
 
 
@@ -637,6 +644,20 @@ class VTOOLS_OT_deleteSprite(bpy.types.Operator):
                
         return {'FINISHED'}    
 
+class VTOOLS_OT_importSpritesFromFolder(bpy.types.Operator):
+    bl_idname = "vtool.importspritesfromfolder"
+    bl_label = "Import Sprites from Folder"
+    bl_description = "Import all sprites within a folder"
+    bl_options = {'REGISTER', 'PRESET', 'UNDO'}
+    
+    planeOffset : bpy.props.FloatProperty()
+    
+    def execute(self, context):
+        print("LOADING IMAGES")
+        armUtils.loadImagesFromFolder(bpy.context.scene.vtRig2DSpriteFolder, self.planeOffset)
+               
+        return {'FINISHED'}   
+    
 
                     
 # --------------- PANELS -------------------------------------------------------------- #
@@ -653,15 +674,23 @@ class VTOOLS_PT_importSprite(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return (context.object.type == "MESH")
+        return (context)
     
     def draw(self,context):
         tex = None
         layout = self.layout
-        if bpy.context.object:
+        
+        col = layout.column(align=True)
+        col.prop(bpy.context.scene, "vtRig2DSpriteFolder", text="")
+        op = col.operator(VTOOLS_OT_importSpritesFromFolder.bl_idname, text="Load Sprites")
+        op.planeOffset = 0.01
+                
+                
+        if len(bpy.context.selected_objects) > 0 and bpy.context.object.type == "MESH":
             
             obj = bpy.context.object
             objName = obj.name
+        
             
             if isSprite(obj):
                 
@@ -820,7 +849,8 @@ classes = (
     VTOOLS_OT_moveSpriteControlBone, VTOOLS_OT_spriteAutokey,
     VTOOLS_OT_selectSpriteControlBones, VTOOLS_OT_calculateSpriteAnimationStep,
     VTOOLS_OT_deleteSprite, VTOOLS_MT_textureImageNodes,
-    VTOOLS_UL_vtRigSprites, VTOOLS_CC_vtRigSpritesCollection,  
+    VTOOLS_UL_vtRigSprites, VTOOLS_CC_vtRigSpritesCollection,
+    VTOOLS_OT_importSpritesFromFolder,  
      )
 
 
@@ -830,6 +860,7 @@ def register_spriteSystem():
     
     bpy.types.Object.vtRigSpritesCollection = bpy.props.CollectionProperty(type=VTOOLS_CC_vtRigSpritesCollection)
     bpy.types.Object.vtRigSpritesCollection_ID = bpy.props.IntProperty(default = -1)
+    bpy.types.Scene.vtRig2DSpriteFolder = bpy.props.StringProperty(subtype='DIR_PATH')
 
 
 def unregister_spriteSystem():
@@ -838,6 +869,7 @@ def unregister_spriteSystem():
     
     del bpy.types.Object.vtRigSpritesCollection
     del bpy.types.Object.vtRigSpritesCollection_ID
+    del bpy.types.Scene.vtRig2DSpriteFolder
 
 
 if __name__ == "__main__":

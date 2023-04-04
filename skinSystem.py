@@ -421,20 +421,23 @@ class VTOOLS_PT_skinSystem(bpy.types.Panel):
             
     @classmethod
     def poll(cls, context):
-        return (context.object.type == "ARMATURE")
+        return (context.object)
     
     def draw(self,context):
-        visibleText = "Visible"
-        obj = bpy.context.object
-        objName = obj.name
-        layout = self.layout
-        #layout.use_property_split = True
-        #layout.use_property_decorate = True
         
-        if obj.type == "ARMATURE":
-            self.drawArmaturePanel(context, obj, layout)
-        else:
-            layout.label(text="Select an Armature Object")
+        if bpy.context.object.type == "ARMATURE":
+            
+            visibleText = "Visible"
+            obj = bpy.context.object
+            objName = obj.name
+            layout = self.layout
+            #layout.use_property_split = True
+            #layout.use_property_decorate = True
+            
+            if obj.type == "ARMATURE":
+                self.drawArmaturePanel(context, obj, layout)
+            else:
+                layout.label(text="Select an Armature Object")
          
 # ------------- MENU --------------------#
 

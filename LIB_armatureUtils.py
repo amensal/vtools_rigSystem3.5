@@ -1,4 +1,8 @@
 import bpy
+import os
+import math
+import mathutils
+from bpy_extras.image_utils import load_image
 
 def updateScene():
     bpy.context.scene.frame_current += 1
@@ -120,3 +124,151 @@ def getSelectedObjectNames():
         selectedNames.append(o.name)
         
     return selectedNames
+
+def crateSpritePlane(pSpriteName):
+    
+    spritePlane = None
+    
+    if bpy.data.objects.find(pSpriteName) != -1:
+        obj = bpy.data.objects[pSpriteName]
+        bpy.data.objects.remove(obj)
+
+    
+    bpy.ops.mesh.primitive_plane_add(enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
+    spritePlane = bpy.context.object
+    spritePlane.name = pSpriteName
+    
+    return spritePlane
+
+def placeSpritePlane(pObjName, pRotation, pImageOffset):
+    
+    plane = bpy.data.objects[pObjName]
+    plane.rotation_euler.x = math.radians(pRotation.x)
+    plane.rotation_euler.y = math.radians(pRotation.y)
+    plane.rotation_euler.z = math.radians(pRotation.z)
+    
+    plane.location.y -= pImageOffset
+    
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+    
+    
+    return True
+
+def findNodeByType(pObjectName, pType):
+    node = None
+    obj = bpy.data.objects[pObjectName]
+    
+    if (len(obj.data.materials) > 0):
+        mat = obj.data.materials[0]
+        for n in mat.node_tree.nodes:
+            if n.type.find(pType) != -1:
+                node = n
+                break
+                
+    return node
+
+def createSpriteMaterial(pSpritePlane, pImage):
+    
+    spriteMaterial = None
+    obj = bpy.data.objects[pSpritePlane]
+    
+    #CREATE NEW MATERIAL
+    #bpy.ops.material.new()
+    
+    #REMOVE MATERIAL IF MATERIAL EXISTS
+    
+    matID = bpy.data.materials.find(pSpritePlane) 
+    if matID != -1:
+        matToRemove = bpy.data.materials[pSpritePlane]
+        bpy.data.materials.remove(matToRemove)
+    
+    mat = bpy.data.materials.new(pSpritePlane)
+    mat.use_nodes = True
+    obj.data.materials.append(mat)
+    
+    """
+    #ADD MATERIAL NODES
+    #OUTPUT
+    outputNode = mat.node_tree.nodes.new(type="ShaderNodeOutputMaterial")
+    outputNode.name = "vtsp_outputShader"
+
+    #SHADER
+    shaderNode = mat.node_tree.nodes.new(type="ShaderNodeBsdfPrincipled")
+    shaderNode.name = "vtsp_shaderNode"
+    
+    #SHADER LINKS
+    mat.node_tree.links.new(shaderNode.outputs["BSDF"], outputNode.inputs["Surface"])
+    
+    #TEXTURE
+    texNode = mat.node_tree.nodes.new(type="ShaderNodeTexImage")
+    texNode.name = "vtsp_texNode"
+    
+    #TEXTURE LINKS
+    mat.node_tree.links.new(texNode.outputs["Color"], shaderNode.inputs["Base Color"]) 
+    mat.node_tree.links.new(texNode.outputs["Alpha"], shaderNode.inputs["Alpha"]) 
+    """     
+    
+    #TEXTURE
+    texNode = mat.node_tree.nodes.new(type="ShaderNodeTexImage")
+    texNode.name = "vtsp_texNode"
+    
+    shaderNode = findNodeByType(pSpritePlane, "BSDF")
+    shaderNode.name = "vtsp_shaderNode"
+    
+    #CONFIGURE MATERIAL
+    if texNode != None and shaderNode != None:
+        #CONFIGURE MATERIAL
+        mat.blend_method = "CLIP"
+        mat.shadow_method = "CLIP"
+        mat.use_backface_culling = True
+
+        #SET IMAGE        
+        texNode.image = pImage
+        
+        #LINKS
+        mat.node_tree.links.new(texNode.outputs["Color"], shaderNode.inputs["Base Color"]) 
+        mat.node_tree.links.new(texNode.outputs["Alpha"], shaderNode.inputs["Alpha"]) 
+        
+    
+    return spriteMaterial    
+    
+def loadImagesFromFolder(pFolderPath, pImageOffset):
+    
+    loadedImages = []
+    fileList = os.listdir(pFolderPath) #GET FOLDER FILE LIST
+    
+    print(" LIB LOADING ", fileList)
+    
+    placeCont = 0
+    for filePath in fileList:
+        print(filePath)
+        
+        if filePath.lower().endswith(".png"):
+            #LOAD PNG IMAGE, else ignore
+            image = load_image(filePath,pFolderPath, check_existing =True, force_reload = True )
+            print(image)
+            
+            #CREATE PLANE
+            spritePlaneName = os.path.splitext(filePath)[0]
+            spritePlane = crateSpritePlane(spritePlaneName)
+
+            placeSpritePlane(spritePlaneName, mathutils.Vector((90,0,0)), pImageOffset*placeCont)
+            #CREATE MATERIAL
+            createSpriteMaterial(spritePlane.name, image)
+            
+            placeCont +=1
+            
+        
+    """
+    images = tuple(load_images(
+            (fn.name for fn in self.files),
+            self.directory,
+            force_reload=self.force_reload,
+            find_sequences=self.image_sequence
+        ))
+    load_image(filename, directory, check_existing=True, force_reload=force_reload)
+
+
+    
+    """
+    return loadedImages 
