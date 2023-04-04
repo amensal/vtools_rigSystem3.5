@@ -33,7 +33,8 @@ def getSelectedBoneNames():
     
     return selectedBoneNameList
 
-def setChainVisibility(pSocketBoneName, pVisible, pType, pUsedSocketList):
+
+def setChainVisibility(pSocketBoneName, pVisible, pUsedSocketList):
     
     arm = bpy.context.object
     activeBoneName = bpy.context.active_bone.name    
@@ -41,51 +42,105 @@ def setChainVisibility(pSocketBoneName, pVisible, pType, pUsedSocketList):
     
     if socketBoneName not in pUsedSocketList:
         socketBone = arm.pose.bones[pSocketBoneName]
-
-        if arm != None:            
-            strToFind = ""
+        
+        if arm != None:
             
-            if pType == "IK":
-                strToFind = "ikTarget"
-                visibleIK = findCustomProperty(socketBone, "visibleIK")
-                arm.pose.bones[socketBoneName][visibleIK] = int(not pVisible)
-            elif pType == "FK":
-                strToFind = "FKChain"
-                visibleFK = findCustomProperty(socketBone, "visibleFK")
-                arm.pose.bones[socketBoneName][visibleFK] = int(not pVisible)
-            elif pType == "FR":
-                strToFind = "FreeChain"
-                visibleFR = findCustomProperty(socketBone, "visibleFR")
-                arm.pose.bones[socketBoneName][visibleFR] = int(not pVisible)
-            elif pType == "SK":
-                strToFind = "SOCKETCHAIN"
-                visibleSK = findCustomProperty(socketBone, "visibleSK")
-                arm.pose.bones[socketBoneName][visibleSK] = int(not pVisible)
-            elif pType == "ST":
-                strToFind = "STRETCHTOP"
-                visibleST = findCustomProperty(socketBone, "visibleST")
-                arm.pose.bones[socketBoneName][visibleST] = int(not pVisible)
+            #COLLECT CHAINS TO SEARCH
+            chainsToSearch = []
+            if bpy.context.object.vtRigChains.fkchain == True:
+                chainsToSearch.append("FKChain")
+            if bpy.context.object.vtRigChains.ikchain == True:
+                chainsToSearch.append("ikTarget")
+            if bpy.context.object.vtRigChains.freechain == True:
+                chainsToSearch.append("FreeChain")               
+            if bpy.context.object.vtRigChains.stretchbone == True:
+                chainsToSearch.append("STRETCHTOP")
             
-            if pType != "SK":
-                for b in arm.pose.bones:
-                    customProp = findCustomProperty(b, "chainSocket")
-                    if customProp != "":
-                        if b[customProp] == socketBoneName:
-                            if b.name.find(strToFind) != -1:
-                                b.bone.hide = pVisible
-                                b.bone.select = pVisible
-                                
-                                if pVisible == False:
-                                    arm.data.bones.active = bpy.context.object.data.bones[b.name]
-            else:
+            #IF SOCKETBONE SET SOCKET VISIBIILTY
+            if bpy.context.object.vtRigChains.socketbone == True:
                 socketBone = arm.pose.bones[socketBoneName]
                 socketBone.bone.hide = pVisible
-                socketBone.bone.select = pVisible
-
+                socketBone.bone.select = pVisible 
+        
+            #RUN ALL BONES AND CHECK
+            for b in arm.pose.bones:
+                customProp = findCustomProperty(b, "chainSocket")
+                if customProp != "":
+                    if b[customProp] == socketBoneName:
+                        
+                        if b.bone.use_deform != True:
+                            #IF NOT IS DEF BONE
+                            for chain in chainsToSearch:  
+                                if b.name.find(chain) != -1:
+                                    b.bone.hide = pVisible
+                                    b.bone.select = pVisible
+                        
+                        else:
+                            if bpy.context.object.vtRigChains.defchain == True:
+                                b.bone.hide = pVisible
+                                b.bone.select = pVisible                   
+            
         arm.data.bones.active = bpy.context.object.data.bones[activeBoneName]
                 
         
     return socketBoneName
+
+
+
+def selectChain(pSocketBoneName, pUsedSocketList):
+    
+    arm = bpy.context.object
+    activeBoneName = bpy.context.active_bone.name    
+    socketBoneName = pSocketBoneName
+    lastVisibleBoneName = ""
+    
+    if socketBoneName not in pUsedSocketList:
+        socketBone = arm.pose.bones[pSocketBoneName]
+        
+        if arm != None:
+            
+            #COLLECT CHAINS TO SEARCH
+            chainsToSearch = []
+            if bpy.context.object.vtRigChains.fkchain == True:
+                chainsToSearch.append("FKChain")
+            if bpy.context.object.vtRigChains.ikchain == True:
+                chainsToSearch.append("ikTarget")
+            if bpy.context.object.vtRigChains.freechain == True:
+                chainsToSearch.append("FreeChain")               
+            if bpy.context.object.vtRigChains.stretchbone == True:
+                chainsToSearch.append("STRETCHTOP")
+            
+            #IF SOCKETBONE SET SOCKET VISIBIILTY
+            if bpy.context.object.vtRigChains.socketbone == True:
+                socketBone = arm.pose.bones[socketBoneName]
+                socketBone.bone.hide = False
+                socketBone.bone.select = True 
+        
+            #RUN ALL BONES AND CHECK
+            for b in arm.pose.bones:
+                customProp = findCustomProperty(b, "chainSocket")
+                if customProp != "":
+                    if b[customProp] == socketBoneName:
+                        
+                        if b.bone.use_deform != True:
+                            #IF NOT IS DEF BONE
+                            for chain in chainsToSearch:  
+                                if b.name.find(chain) != -1:
+                                    b.bone.hide = False
+                                    b.bone.select = True
+                                    lastVisibleBoneName = b.name
+                        
+                        else:
+                            if bpy.context.object.vtRigChains.defchain == True:
+                                b.bone.hide = False
+                                b.bone.select = True
+                                lastVisibleBoneName = b.name               
+            
+        arm.data.bones.active = bpy.context.object.data.bones[lastVisibleBoneName]
+                
+        
+    return socketBoneName
+
 
 def getFKChain():
     
@@ -1686,8 +1741,7 @@ class VTOOLS_OP_setChainVisibility(bpy.types.Operator):
     bl_idname = "vtoolsrigsystem.setchainvisibility"
     bl_label = "Show selected chain"
     bl_description = "Show selected chain from active chain"
-    
-    action : bpy.props.StringProperty(default="IK")
+
     visibility : bpy.props.BoolProperty(default=True)
     
     def execute(self, context):
@@ -1700,18 +1754,63 @@ class VTOOLS_OP_setChainVisibility(bpy.types.Operator):
             for b in selectedBones:
                 socketBone = getChainSocketBone(arm.pose.bones[b])
                 if socketBone != None:
-                    usedSocket = setChainVisibility(socketBone.name, self.visibility, self.action, usedSocketList)
+                    usedSocket = setChainVisibility(socketBone.name, self.visibility, usedSocketList)
                     usedSocketList.append(usedSocket)
         else:
             #ALL BONES
             for b in arm.pose.bones:
                 socketBone = getChainSocketBone(b)
                 if socketBone != None:
-                    usedSocket = setChainVisibility(socketBone.name, self.visibility, self.action, usedSocketList)
+                    usedSocket = setChainVisibility(socketBone.name, self.visibility, usedSocketList)
                     usedSocketList.append(usedSocket)
 
         return {'FINISHED'}
+
+class VTOOLS_OP_selectChain(bpy.types.Operator):
+    bl_idname = "vtoolsrigsystem.selectchain"
+    bl_label = "Select Chain"
+    bl_description = "Select chain from active chain"
     
+    
+    def unselectAllBones(self, pArm, pSelectedBones):
+        
+        print("UNSELECT")
+        for bName in pSelectedBones:
+            b = pArm.pose.bones[bName]
+            if b.bone.hide == False:
+                b.bone.select = False
+        
+        #pArm.data.bones.active = None
+                
+    def execute(self, context):
+        
+        arm = bpy.context.object      
+        
+        usedSocketList = []
+        if bpy.context.object.ikFkAffectAllChains == False:
+            selectedBones = getSelectedBoneNames()
+            self.unselectAllBones(arm, selectedBones)
+            #ONLY ON SELECTED BONES
+            for b in selectedBones:
+                socketBone = getChainSocketBone(arm.pose.bones[b])
+                if socketBone != None:
+                    usedSocket = selectChain(socketBone.name, usedSocketList)
+                    usedSocketList.append(usedSocket)
+        else:
+            #ALL BONES
+            for b in arm.pose.bones:
+                socketBone = getChainSocketBone(b)
+                if socketBone != None:
+                    arm.data.bones.active = arm.data.bones[socketBone.name]
+                    #b.bone.select = False
+                    
+                    usedSocket = selectChain(socketBone.name, usedSocketList)
+                    usedSocketList.append(usedSocket)
+
+        return {'FINISHED'}
+
+
+ 
 #----------- MAIN -----------------#
 
 class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
@@ -1830,9 +1929,12 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     box = layout.box()
                     
                     #box.label(text="Visibility")
+                    
+                    box.prop(bpy.context.object,"ikFkAffectAllChains", text="All Armature", toggle = True)
+                    
+                    
                     mainRow = box.row()
                     col = mainRow.column(align=True)
-                    col.prop(bpy.context.object,"ikFkAffectAllChains", text="All Armature", toggle = True)
                     
                     row = col.row(align=True)
                     row.prop(bpy.context.object.vtRigChains,"fkchain", text="FK", toggle = True)
@@ -1842,104 +1944,16 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     row.prop(bpy.context.object.vtRigChains,"stretchbone", text="ST", toggle = True)
                     row = col.row(align=True)
                     row.prop(bpy.context.object.vtRigChains,"socketbone", text="SK", toggle = True)
-                    row.prop(bpy.context.object.vtRigChains,"defchain", text="ST", toggle = True)
+                    row.prop(bpy.context.object.vtRigChains,"defchain", text="DF", toggle = True)
                     
                     col = mainRow.column(align=True)
                     op = col.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="", icon="HIDE_OFF")
-                    op.visibility = True
+                    op.visibility = False
                     op = col.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="", icon="HIDE_ON")
-                    op.visibility = False
+                    op.visibility = True
                     
-                    op = col.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="", icon="EYEDROPPER")
-                    op.visibility = False
-                    
-                    """
-                    col.separator()
-                    
-                    col = box.column()
-                    row = col.row(align=True)
-                    
-                    
-                    visibleSK = findCustomProperty(socketBone, "visibleSK")
-                    if visibleSK != "":
-                        if socketBone[visibleSK] == 1:
-                            opIcon = ""
-                            visible = True
-                        else:
-                            opIcon = "HIDE_ON"
-                            visible = False
-                        
-                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="SK", icon=opIcon)
-                        op.action = "SK"
-                        op.visibility = visible
-                        
-                    visibleSK = findCustomProperty(socketBone, "visibleST")
-                    if visibleSK != "":
-                        if socketBone[visibleSK] == 1:
-                            opIcon = "HIDE_OFF"
-                            visible = True
-                        else:
-                            opIcon = "HIDE_ON"
-                            visible = False
-                        
-                        
-                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="ST", icon=opIcon)
-                        op.action = "ST"
-                        op.visibility = visible
-                        
-                        
-                    
-                    row = col.row(align=True)
-                    
-                    visibleFK = findCustomProperty(socketBone, "visibleFK")
-                    if visibleFK != "":
-                        if socketBone[visibleFK] == 1:
-                            opIcon = "HIDE_OFF"
-                            visible = True
-                        else:
-                            opIcon = "HIDE_ON"
-                            visible = False
-                        
-                        
-                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="FK", icon=opIcon)
-                        op.action = "FK"
-                        op.visibility = visible
-                        
-                    
-                    
-                    visibleFR = findCustomProperty(socketBone, "visibleFR")
-                    if visibleFR != "":
-                        if socketBone[visibleFR] == 1:
-                            opIcon = "HIDE_OFF"
-                            visible = True
-                        else:
-                            opIcon = "HIDE_ON"
-                            visible = False
-                            
-                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="FR", icon=opIcon)
-                        op.action = "FR"
-                        op.visibility = visible
-                        
-                    row = col.row(align=True)
-                    visibleIK = findCustomProperty(socketBone, "visibleIK")
-                    if visibleIK != "":
-                        if socketBone[visibleIK] == 1:
-                            opIcon = "HIDE_OFF"
-                            visible = True
-                        else:
-                            opIcon = "HIDE_ON"
-                            visible = False
-                        
-                          
-                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="IK", icon=opIcon)
-                        op.action = "IK"
-                        op.visibility = visible
-                    else:
-                        row.enabled = False
-                        op = row.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="IK")
-                        
-                    """    
-                        
+                    op = col.operator(VTOOLS_OP_selectChain.bl_idname, text="", icon="EYEDROPPER")
+                                            
                     #CONTROL BOX
                     box = layout.box()
                     
@@ -2017,6 +2031,7 @@ def register_rigsystem():
     bpy.utils.register_class(VTOOLS_OP_RS_rebuildChain)
     bpy.utils.register_class(VTOOLS_OP_RS_setRotationMode)
     bpy.utils.register_class(VTOOLS_OP_setChainVisibility)
+    bpy.utils.register_class(VTOOLS_OP_selectChain)
     
     
     bpy.types.Scene.fkControlObjects = bpy.props.StringProperty()
@@ -2052,6 +2067,7 @@ def unregister_rigsystem():
     bpy.utils.unregister_class(VTOOLS_OP_RS_rebuildChain)
     bpy.utils.unregister_class(VTOOLS_OP_RS_setRotationMode)
     bpy.utils.unregister_class(VTOOLS_OP_setChainVisibility)
+    bpy.utils.unregister_class(VTOOLS_OP_selectChain)
     
     del bpy.types.Scene.fkControlObjects
     del bpy.types.Scene.fkFreeControlObjects
