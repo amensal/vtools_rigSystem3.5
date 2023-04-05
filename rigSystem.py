@@ -683,8 +683,6 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         arm = bpy.context.object
         chains = self.getSelectedChains()
         
-        #print("ENTRA -------------------- ", chains)
-
         for c in chains:
             bpy.ops.object.mode_set(mode='POSE')
             
@@ -792,10 +790,8 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         
         #IF SINGLE CHAIN MOVE STRETCH TOP BONE
         if pIsSingleChain:
-            #print("is single")
             stretchTopBone.head = stretchTopBone.tail
             newPosition = moveAlognDirection(stretchTopBone.tail.copy(), editBones[pSocketBoneName].head.copy(), stretchTopBone.tail.copy())
-            print("New Position ", newPosition)
             stretchTopBone.tail -= newPosition
         
         
@@ -961,8 +957,9 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
     
     def rootInSelected(self,pSelBones):
         rootFind = False
+        rootName = bpy.context.scene.fkikRoot
         for b in pSelBones:
-            if b.find(bpy.context.scene.fkikRoot) != -1:
+            if b == rootName:
                 rootFind = True
         
         return rootFind         
@@ -981,8 +978,6 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         lastFreeBoneName = None
         addIkChainOption = bpy.context.scene.addIkChain
 
-        print("CREATE IK FK")
-        
         #IGNORE USED BONES
         self.ignoreUsedBones(arm)
         
@@ -1453,9 +1448,6 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
                          
     def createIKChain(self, pChainLenght, pSockectBoneName):
 
-                
-        #print("------------------ ENTRA IK ---------------------")
-        
         arm = bpy.context.active_object
         selBones = getSelectedChain(arm)
         cadLen = pChainLenght
@@ -1783,7 +1775,6 @@ class VTOOLS_OP_selectChain(bpy.types.Operator):
     
     def unselectAllBones(self, pArm, pSelectedBones):
         
-        print("UNSELECT")
         for bName in pSelectedBones:
             b = pArm.pose.bones[bName]
             if b.bone.hide == False:
