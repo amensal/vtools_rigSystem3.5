@@ -32,7 +32,7 @@ def register():
     for c in classes:
         bpy.utils.register_class(c)
     
-    from .rigsystem import register_rigsystem
+    from .rigSystem import register_rigsystem
     register_rigsystem()
     
     from .curveTools import register_curveTools
@@ -50,7 +50,7 @@ def register():
 
 def unregister():
 
-    from .rigsystem import unregister_rigsystem
+    from .rigSystem import unregister_rigsystem
     unregister_rigsystem()
     
     from .curveTools import unregister_curveTools
