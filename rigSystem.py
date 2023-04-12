@@ -1989,7 +1989,8 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     col = box.column(align=True) 
                     if hasattr(activeBone, "jiggle_enable") == True:
                         col.prop(activeBone, "jiggle_enable",emboss = True, toggle=True, text="Wiggle")
-                        if activeBone.jiggle_enable == True:
+                        if activeBone.jiggle_enable == False:
+                            col.prop(activeBone, "jiggle_active",emboss = True, toggle=True, text="Active")
                             col.prop(activeBone, "jiggle_stiffness",emboss = True, toggle=True, text="Stiff")
                             col.prop(activeBone, "jiggle_dampen",emboss = True, toggle=True, text="Dampen")
                             col.prop(activeBone, "jiggle_translation",emboss = True, toggle=True, text="Translation")
@@ -2006,12 +2007,12 @@ class VTOOLS_vtChainsProps(bpy.types.PropertyGroup):
             
     #---------- PARAMETERS ----------#  
     
-    fkchain : bpy.props.BoolProperty(default=True)
-    ikchain : bpy.props.BoolProperty(default=True)
-    socketbone : bpy.props.BoolProperty(default=True)
-    stretchbone : bpy.props.BoolProperty(default=True)
-    freechain : bpy.props.BoolProperty(default=True)
-    defchain : bpy.props.BoolProperty(default=True)
+    fkchain : bpy.props.BoolProperty(default=True, override={"LIBRARY_OVERRIDABLE"})
+    ikchain : bpy.props.BoolProperty(default=True, override={"LIBRARY_OVERRIDABLE"})
+    socketbone : bpy.props.BoolProperty(default=True, override={"LIBRARY_OVERRIDABLE"})
+    stretchbone : bpy.props.BoolProperty(default=True, override={"LIBRARY_OVERRIDABLE"})
+    freechain : bpy.props.BoolProperty(default=True, override={"LIBRARY_OVERRIDABLE"})
+    defchain : bpy.props.BoolProperty(default=True, override={"LIBRARY_OVERRIDABLE"})
     
 
 
@@ -2049,8 +2050,8 @@ def register_rigsystem():
     bpy.types.Scene.addEndBone = bpy.props.BoolProperty(default = True)
     
     #OBJECT PROPERTIES 
-    bpy.types.Object.ikFkAffectAllChains = bpy.props.BoolProperty(default = True, description="(True) Affect all chains within the armature or (False) only from selected Bones")
-    bpy.types.Object.vtRigChains =  bpy.props.PointerProperty(type=VTOOLS_vtChainsProps) 
+    bpy.types.Object.ikFkAffectAllChains = bpy.props.BoolProperty(default = True, description="(True) Affect all chains within the armature or (False) only from selected Bones", override={"LIBRARY_OVERRIDABLE"})
+    bpy.types.Object.vtRigChains =  bpy.props.PointerProperty(type=VTOOLS_vtChainsProps, override={"LIBRARY_OVERRIDABLE"},) 
 
     
 def unregister_rigsystem():
