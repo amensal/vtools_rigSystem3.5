@@ -1989,7 +1989,7 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     col = box.column(align=True) 
                     if hasattr(activeBone, "jiggle_enable") == True:
                         col.prop(activeBone, "jiggle_enable",emboss = True, toggle=True, text="Wiggle")
-                        if activeBone.jiggle_enable == False:
+                        if activeBone.jiggle_enable == True:
                             col.prop(activeBone, "jiggle_active",emboss = True, toggle=True, text="Active")
                             col.prop(activeBone, "jiggle_stiffness",emboss = True, toggle=True, text="Stiff")
                             col.prop(activeBone, "jiggle_dampen",emboss = True, toggle=True, text="Dampen")
