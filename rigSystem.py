@@ -850,14 +850,24 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         stretchTopBone.parent = arm.data.edit_bones[pSocketBoneName]
         
         
-        #IF SINGLE CHAIN MOVE STRETCH TOP BONE
-        stretchTopBone.head = stretchTopBone.tail
-        newPosition = moveAlognDirection(stretchTopBone.tail.copy(), editBones[pSocketBoneName].head.copy(), stretchTopBone.tail.copy())
-        stretchTopBone.tail -= newPosition
+        
+        """
+        if pIKTargetName != None:
+            stretchTopBone.head = stretchTopBone.tail
+            newPosition = moveAlognDirection(stretchTopBone.tail.copy(), editBones[pSocketBoneName].head.copy(), stretchTopBone.tail.copy())
+            stretchTopBone.tail -= newPosition
+        """
         
         if pIsSingleChain:
+            #IF SINGLE CHAIN MOVE STRETCH TOP BONE
+            stretchTopBone.head = stretchTopBone.tail
+            newPosition = moveAlognDirection(stretchTopBone.tail.copy(), editBones[pSocketBoneName].head.copy(), stretchTopBone.tail.copy())
+            stretchTopBone.tail -= newPosition
+            
             #-- CONNECT WIGGLE SOCKET TO 
             self.connectSocketWiggle(arm, pSocketBoneName, stretchTopName)
+            
+            
 
         #ADD STRETCH CONSTRAINT
         bpy.ops.object.mode_set(mode='POSE')
@@ -1135,14 +1145,14 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
   
             #-- CREATE FK
             fkChain = self.createFKChain(chainLenght, sockectBoneName, ikTargetName, ikChain)
-            lastFkBoneName = fkChain[len(fkChain)-2]
+            lastFkBoneName = fkChain[len(fkChain)-2] #USED FOR IK
+            lastFKStretchBone = fkChain[len(fkChain)-1] #USED FOR STRETCH
             
             #if addIkChainOption == True and singleChain == False: 
                 
             #-- CREATE STRETCH BONE
             if singleChain == False:
-                stretchBones = self.createStretchBone(sockectBoneName, lastFkBoneName, ikTargetName, singleChain)
-                
+                stretchBones = self.createStretchBone(sockectBoneName, lastFKStretchBone, ikTargetName, singleChain)
             else:
                 stretchBones = self.createStretchBone(sockectBoneName, fkChain[0], None, singleChain)
                 
