@@ -45,40 +45,35 @@ def setChainVisibility(pSocketBoneName, pVisible, pUsedSocketList):
         
         if arm != None:
             
-            #COLLECT CHAINS TO SEARCH
-            chainsToSearch = []
-            if bpy.context.object.vtRigChains.fkchain == True:
-                chainsToSearch.append("FKChain")
-            if bpy.context.object.vtRigChains.ikchain == True:
-                chainsToSearch.append("ikTarget")
-            if bpy.context.object.vtRigChains.freechain == True:
-                chainsToSearch.append("FreeChain")               
-            if bpy.context.object.vtRigChains.stretchbone == True:
-                chainsToSearch.append("STRETCHTOP")
-            
-            #IF SOCKETBONE SET SOCKET VISIBIILTY
-            if bpy.context.object.vtRigChains.socketbone == True:
-                socketBone = arm.pose.bones[socketBoneName]
-                socketBone.bone.hide = pVisible
-                socketBone.bone.select = pVisible 
-        
-            #RUN ALL BONES AND CHECK
             for b in arm.pose.bones:
-                customProp = findCustomProperty(b, "chainSocket")
-                if customProp != "":
-                    if b[customProp] == socketBoneName:
-                        
-                        if b.bone.use_deform != True:
-                            #IF NOT IS DEF BONE
-                            for chain in chainsToSearch:  
-                                if b.name.find(chain) != -1:
-                                    b.bone.hide = pVisible
-                                    b.bone.select = pVisible
-                        
-                        else:
-                            if bpy.context.object.vtRigChains.defchain == True:
-                                b.bone.hide = pVisible
-                                b.bone.select = pVisible                   
+                
+                #IS SOCKET CHAIN
+                if b.name.find("SOCKETCHAIN") != -1:
+                    b.bone.hide = not bpy.context.object.vtRigChains.socketbone
+                    b.bone.select = not bpy.context.object.vtRigChains.socketbone
+                                
+                else:
+                    customProp = findCustomProperty(b, "chainSocket")
+                    if customProp != "":
+                        if b[customProp] == socketBoneName:    
+                            if b.bone.use_deform != True:
+                                #IF NOT IS DEF BONE
+                                if b.name.find("FKChain") != -1:
+                                    b.bone.hide = not bpy.context.object.vtRigChains.fkchain
+                                    b.bone.select = not bpy.context.object.vtRigChains.fkchain
+                                elif b.name.find("ikTarget") != -1:
+                                    b.bone.hide = not bpy.context.object.vtRigChains.ikchain
+                                    b.bone.select = not bpy.context.object.vtRigChains.ikchain
+                                elif b.name.find("FreeChain") != -1:
+                                    b.bone.hide = not bpy.context.object.vtRigChains.freechain
+                                    b.bone.select = not bpy.context.object.vtRigChains.freechain
+                                elif b.name.find("STRETCHTOP") != -1:
+                                    b.bone.hide = not bpy.context.object.vtRigChains.stretchbone
+                                    b.bone.select = not bpy.context.object.vtRigChains.stretchbone
+                                
+                            else:
+                                b.bone.hide = not bpy.context.object.vtRigChains.defchain 
+                                b.bone.select = not bpy.context.object.vtRigChains.defchain 
             
         arm.data.bones.active = bpy.context.object.data.bones[activeBoneName]
                 
@@ -92,13 +87,53 @@ def selectChain(pSocketBoneName, pUsedSocketList):
     arm = bpy.context.object
     activeBoneName = bpy.context.active_bone.name    
     socketBoneName = pSocketBoneName
-    lastVisibleBoneName = ""
+    lastVisibleBoneName = None
     
     if socketBoneName not in pUsedSocketList:
         socketBone = arm.pose.bones[pSocketBoneName]
         
         if arm != None:
+            for b in arm.pose.bones:
+                
+                #IS SOCKET CHAIN
+                if b.name.find("SOCKETCHAIN") != -1 and bpy.context.object.vtRigChains.socketbone == True:
+                    b.bone.hide = False
+                    b.bone.select = True
+                    lastVisibleBoneName = b.name
+                                
+                else:
+                    customProp = findCustomProperty(b, "chainSocket")
+                    if customProp != "":
+                        if b[customProp] == socketBoneName:    
+                            if b.bone.use_deform != True:
+                                #IF NOT IS DEF BONE
+                                if b.name.find("FKChain") != -1 and bpy.context.object.vtRigChains.fkchain == True:
+                                    b.bone.hide = False
+                                    b.bone.select = True
+                                    lastVisibleBoneName = b.name
+                                elif b.name.find("ikTarget") != -1 and bpy.context.object.vtRigChains.ikchain == True:
+                                    b.bone.hide = False
+                                    b.bone.select = True
+                                    lastVisibleBoneName = b.name
+                                elif b.name.find("FreeChain") != -1 and bpy.context.object.vtRigChains.freechain == True:
+                                    b.bone.hide = False
+                                    b.bone.select = True
+                                    lastVisibleBoneName = b.name
+                                elif b.name.find("STRETCHTOP") != -1 and bpy.context.object.vtRigChains.stretchbone == True:
+                                    b.bone.hide = False
+                                    b.bone.select = True
+                                    lastVisibleBoneName = b.name
+                                   
+                            elif bpy.context.object.vtRigChains.defchain == True:
+                                b.bone.hide = False
+                                b.bone.select = True
+                            
+                                lastVisibleBoneName = b.name
+        
+        if lastVisibleBoneName != None:    
+            arm.data.bones.active = bpy.context.object.data.bones[lastVisibleBoneName]
             
+        """
             #COLLECT CHAINS TO SEARCH
             chainsToSearch = []
             if bpy.context.object.vtRigChains.fkchain == True:
@@ -134,10 +169,11 @@ def selectChain(pSocketBoneName, pUsedSocketList):
                             if bpy.context.object.vtRigChains.defchain == True:
                                 b.bone.hide = False
                                 b.bone.select = True
-                                lastVisibleBoneName = b.name               
+                                lastVisibleBoneName = b.name
+                         
             
         arm.data.bones.active = bpy.context.object.data.bones[lastVisibleBoneName]
-                
+        """         
         
     return socketBoneName
 
@@ -403,8 +439,29 @@ def duplicateBone(pNewBoneName, pArm, pBoneName, pParenting):
     return newBoneName
 
 
+def addExtraBone(pChainPrefix, pArm, pBoneName):
     
-def duplicateChainBone(pChainPrefix, pArm, pLayer, pConnected):
+    currentMode = bpy.context.mode
+    baseBone = pArm.data.edit_bones[pBoneName]
+    
+    bpy.ops.object.mode_set(mode='EDIT')
+    
+    newBoneName = pChainPrefix + "_extra_" + pBoneName
+    extraBoneName = duplicateBone(newBoneName, pArm, pBoneName, True)
+    extraBone = pArm.data.edit_bones[extraBoneName]
+    
+    #extraBone.head = extraBone.tail
+    newPosition = moveAlognDirection(extraBone.tail.copy(), extraBone.head.copy(), extraBone.tail.copy())
+    extraBone.tail -= newPosition
+    extraBone.head = baseBone.tail
+    
+    extraBone.parent = baseBone
+    #bpy.ops.object.mode_set(mode=currentMode)
+    
+    return extraBoneName
+    
+        
+def duplicateChainBone(pChainPrefix, pArm, pLayer, pConnected, pExtraBone):
     #hola
     firstBone = None
     arm = pArm
@@ -418,7 +475,6 @@ def duplicateChainBone(pChainPrefix, pArm, pLayer, pConnected):
     chainLen = len(selBones)
     
     #-- duplicate chain
-    
     for b in selBones:
         newBoneName = pChainPrefix + b.name
         nbName = duplicateBone(newBoneName, arm, b.name, True)
@@ -479,6 +535,12 @@ def duplicateChainBone(pChainPrefix, pArm, pLayer, pConnected):
         pArm.data.edit_bones[sortedDuplicatedBones[0]].parent = None
         """
         
+        #ADD LAST BONE
+        if pExtraBone == True:
+            extraBoneName = addExtraBone(pChainPrefix, pArm, sortedDuplicatedBones[len(sortedDuplicatedBones)-1])
+            sortedDuplicatedBones.append(extraBoneName)
+            moveBoneToLayer(arm,extraBoneName,28)
+            
         bpy.ops.object.mode_set(mode='OBJECT')            
         bpy.ops.object.mode_set(mode='POSE')
         
@@ -789,12 +851,14 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         
         
         #IF SINGLE CHAIN MOVE STRETCH TOP BONE
+        stretchTopBone.head = stretchTopBone.tail
+        newPosition = moveAlognDirection(stretchTopBone.tail.copy(), editBones[pSocketBoneName].head.copy(), stretchTopBone.tail.copy())
+        stretchTopBone.tail -= newPosition
+        
         if pIsSingleChain:
-            stretchTopBone.head = stretchTopBone.tail
-            newPosition = moveAlognDirection(stretchTopBone.tail.copy(), editBones[pSocketBoneName].head.copy(), stretchTopBone.tail.copy())
-            stretchTopBone.tail -= newPosition
-        
-        
+            #-- CONNECT WIGGLE SOCKET TO 
+            self.connectSocketWiggle(arm, pSocketBoneName, stretchTopName)
+
         #ADD STRETCH CONSTRAINT
         bpy.ops.object.mode_set(mode='POSE')
         stretchBone = arm.pose.bones[stretchBoneName]
@@ -913,14 +977,36 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             tCons.influence = 1
             tCons.enabled = False
             
-            #CREATE EIGGLE CONTROL
+            #CREATE WIGGLE CONTROL
             bpy.ops.object.mode_set(mode='POSE')  
             tCons = arm.pose.bones[sockectBoneName].constraints.new('COPY_TRANSFORMS')
             tCons.name = "WiggleControl"
             tCons.influence = 0
             tCons.enabled = False
             
+            #CREATE GLOBAL WIGGLE CONTROL
+            tCons = arm.pose.bones[sockectBoneName].constraints.new('DAMPED_TRACK')
+            tCons.name = "GlobalWiggle"
+            tCons.target = arm
+            #tCons.subtarget = newChain[i+1]
+            tCons.track_axis = "TRACK_Y"
+            #tCons.target_space = 'WORLD'
+            #tCons.owner_space = 'WORLD'
+            tCons.influence = 0
+            tCons.enabled = False
             
+            #WIGGLE DRIVER
+            tmpD = tCons.driver_add("influence")
+            tmpD.driver.type = 'SCRIPTED'
+            tmpD.driver.expression = "wiggleControl"
+            
+            tmpV = tmpD.driver.variables.new()
+            tmpV.name = "wiggleControl"
+            tmpV.targets[0].id_type = 'OBJECT'
+            tmpV.targets[0].id = bpy.data.objects[arm.name]
+            tmpV.targets[0].data_path = "pose.bones[\""+sockectBoneName+"\"].constraints[\"WiggleControl\"].influence"
+            
+    
             #SET CUSTOM OBJECT
             if bpy.context.scene.socketControlObjects != '':
                 arm.pose.bones[sockectBoneName].custom_shape = bpy.data.objects[bpy.context.scene.socketControlObjects]
@@ -938,7 +1024,20 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='OBJECT')
         
         return sockectBoneName
-            
+    
+    #CONNECT GLOBAL WIGGLE
+    
+    def connectSocketWiggle(self, pArm, pSocketBoneName, pStretchTopName):
+        
+        arm = pArm
+        bpy.ops.object.mode_set(mode='POSE') 
+        socketBone = arm.pose.bones[pSocketBoneName] 
+        if socketBone.constraints.find("GlobalWiggle") != -1:
+            cons = socketBone.constraints["GlobalWiggle"]
+            cons.subtarget = pStretchTopName
+            cons.enabled = True
+        
+                 
     #PARENT TO SOCKET 
     def parentToSocket(self,pArm, pSockectBoneName, pChain, pUseConnect):
         arm = pArm
@@ -1036,7 +1135,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
   
             #-- CREATE FK
             fkChain = self.createFKChain(chainLenght, sockectBoneName, ikTargetName, ikChain)
-            lastFkBoneName = fkChain[len(fkChain)-1]
+            lastFkBoneName = fkChain[len(fkChain)-2]
             
             #if addIkChainOption == True and singleChain == False: 
                 
@@ -1051,7 +1150,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
             stretchTopName = stretchBones[1]
             
             moveBoneToLayer(arm, stretchBoneName, 30)
-            moveBoneToLayer(arm, stretchTopName, 1)
+            moveBoneToLayer(arm, stretchTopName, 1)            
         
             #-- PARENT FK TO STRETCH BONE
             if stretchBoneName != None:
@@ -1452,7 +1551,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         selBones = getSelectedChain(arm)
         cadLen = pChainLenght
         lastIKBoneName = None
-        newChain = duplicateChainBone("IKChain-", arm,30, True)
+        newChain = duplicateChainBone("IKChain-", arm,30, True, False)
         lastIKBone = arm.data.bones[newChain[len(newChain)-1]]
         lastIKBoneName = lastIKBone.name
         
@@ -1501,7 +1600,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
     def createFreeChain(self, pArm, pChainLenght, pSockectBoneName, pFKChain, pIKChain):
         arm = pArm
         selBones = getSelectedChain(arm)
-        freeChain = duplicateChainBone("FreeChain-", arm,1, False) 
+        freeChain = duplicateChainBone("FreeChain-", arm,1, False, False) 
         
         #SETTINGS
         for i in range(0,len(freeChain)):
@@ -1532,7 +1631,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         selBones = getSelectedChain(arm)
         
         #--FK BONES
-        newChain = duplicateChainBone("FKChain-", arm,2, False) 
+        newChain = duplicateChainBone("FKChain-", arm,2, False, True) 
        
         if len(newChain) > 0:
  
@@ -1552,26 +1651,27 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
                 
                 
                 #CONSTRAINT TO IK
-                if pIKChain != None:
-                    tCons = arm.pose.bones[o].constraints.new('COPY_TRANSFORMS')
-                    tCons.name = "IK_TRANSFORM"
-                    tCons.target = arm
-                    tCons.subtarget = pIKChain[i]
-                    tCons.target_space = 'WORLD'
-                    tCons.owner_space = 'WORLD'
-                    tCons.influence = 0
-                    
-                    #SET IK DRIVER
-                    tmpD = tCons.driver_add("influence")
-                    tmpD.driver.type = 'SCRIPTED'
-                    tmpD.driver.expression = "ikControl"
-                    
-                    tmpV = tmpD.driver.variables.new()
-                    tmpV.name = "ikControl"
-                    tmpV.targets[0].id_type = 'OBJECT'
-                    tmpV.targets[0].id = bpy.data.objects[arm.name]
-                    tmpV.targets[0].data_path = "pose.bones[\""+pSockectBoneName+"\"].constraints[\"IKControl\"].influence"
-                    
+                if i < len(newChain)-1: #IF NOT LAST FK BONE
+                    if pIKChain != None:
+                        tCons = arm.pose.bones[o].constraints.new('COPY_TRANSFORMS')
+                        tCons.name = "IK_TRANSFORM"
+                        tCons.target = arm
+                        tCons.subtarget = pIKChain[i]
+                        tCons.target_space = 'WORLD'
+                        tCons.owner_space = 'WORLD'
+                        tCons.influence = 0
+                        
+                        #SET IK DRIVER
+                        tmpD = tCons.driver_add("influence")
+                        tmpD.driver.type = 'SCRIPTED'
+                        tmpD.driver.expression = "ikControl"
+                        
+                        tmpV = tmpD.driver.variables.new()
+                        tmpV.name = "ikControl"
+                        tmpV.targets[0].id_type = 'OBJECT'
+                        tmpV.targets[0].id = bpy.data.objects[arm.name]
+                        tmpV.targets[0].data_path = "pose.bones[\""+pSockectBoneName+"\"].constraints[\"IKControl\"].influence"
+                        
                 
                 #WIGGLE CONTRAINT
                 bpy.ops.object.mode_set(mode="POSE") 
@@ -1680,10 +1780,11 @@ class VTOOLS_OP_RS_snapFKIK(bpy.types.Operator):
         stretchControl = getStretchControl()
         
         if ikTarget != None:
+            bpy.ops.object.mode_set(mode='POSE')
             arm.pose.bones[stretchControl].matrix = arm.pose.bones[ikTarget].matrix
         
-            for i in range(0,len(fkChain)):
-                bpy.ops.object.mode_set(mode='POSE')
+            for i in range(0,len(fkChain)-1):
+                
                 arm.pose.bones[fkChain[i]].matrix = arm.pose.bones[ikChain[i]].matrix
                 
                   
@@ -1949,9 +2050,8 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     col = mainRow.column(align=True)
                     op = col.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="", icon="HIDE_OFF")
                     op.visibility = False
-                    op = col.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="", icon="HIDE_ON")
-                    op.visibility = True
-                    
+                    #op = col.operator(VTOOLS_OP_setChainVisibility.bl_idname, text="", icon="HIDE_ON")
+                    #op.visibility = True
                     op = col.operator(VTOOLS_OP_selectChain.bl_idname, text="", icon="EYEDROPPER")
                                             
                     #CONTROL BOX
@@ -1985,6 +2085,12 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                     if socketBone.constraints.find("WiggleControl") != -1:
                         col.prop(socketBone.constraints["WiggleControl"], "influence", text="Follow", emboss = True)
                     
+                    """ 
+                    if socketBone.constraints.find("GlobalWiggle") != -1:
+                        col.prop(socketBone.constraints["GlobalWiggle"], "influence", text="Global Wiggle", emboss = True)
+                    """
+                    
+                    """
                     #IF WIGGLE ADDON ACTIVE
                     col = box.column(align=True) 
                     if hasattr(activeBone, "jiggle_enable") == True:
@@ -1996,7 +2102,7 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
                             col.prop(activeBone, "jiggle_translation",emboss = True, toggle=True, text="Translation")
                             col.prop(activeBone, "jiggle_amplitude",emboss = True, toggle=True, text="Rotation")
                             col.prop(activeBone, "jiggle_stretch",emboss = True, toggle=True, text="Stretch")
-                    
+                    """
 
 
 #---------- CLASES ----------#
