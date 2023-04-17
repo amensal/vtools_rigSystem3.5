@@ -235,18 +235,13 @@ def createSpriteMaterial(pSpritePlane, pImage):
 def loadImagesFromFolder(pFolderPath, pImageOffset):
     
     loadedImages = []
-    fileList = os.listdir(pFolderPath) #GET FOLDER FILE LIST
-    
-    print(" LIB LOADING ", fileList)
-    
+    fileList = sorted(os.listdir(pFolderPath)) #GET FOLDER FILE LIST
+
     placeCont = 0
     for filePath in fileList:
-        print(filePath)
-        
         if filePath.lower().endswith(".png"):
             #LOAD PNG IMAGE, else ignore
             image = load_image(filePath,pFolderPath, check_existing =True, force_reload = True )
-            print(image)
             
             #CREATE PLANE
             spritePlaneName = os.path.splitext(filePath)[0]
