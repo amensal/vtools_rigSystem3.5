@@ -219,7 +219,7 @@ def createSpriteMaterial(pSpritePlane, pImage):
     if texNode != None and shaderNode != None:
         #CONFIGURE MATERIAL
         mat.blend_method = "CLIP"
-        mat.shadow_method = "CLIP"
+        mat.shadow_method = "NONE"
         mat.use_backface_culling = True
 
         #SET IMAGE        
@@ -228,6 +228,7 @@ def createSpriteMaterial(pSpritePlane, pImage):
         
         #LINKS
         mat.node_tree.links.new(texNode.outputs["Color"], shaderNode.inputs["Base Color"]) 
+        mat.node_tree.links.new(texNode.outputs["Color"], shaderNode.inputs["Emission"]) 
         mat.node_tree.links.new(texNode.outputs["Alpha"], shaderNode.inputs["Alpha"]) 
         
     
