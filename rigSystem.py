@@ -338,7 +338,11 @@ def getChainSocketBone(pBone):
             if socketProperty != "":
                 chainSocketName = bpy.context.object.pose.bones[activeBone.name].get(socketProperty)
                 if chainSocketName != "":
-                    socketBone = bpy.context.object.pose.bones[chainSocketName]
+                    if bpy.context.object.pose.bones.find(chainSocketName) != -1:
+                        socketBone = bpy.context.object.pose.bones[chainSocketName]
+                    else:
+                        del bpy.context.object.pose.bones[activeBone.name][socketProperty]
+                        
         else:
             socketBone = activeBone
             
@@ -906,7 +910,7 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
         socketBone = arm.pose.bones[pSocketBoneName]
         #socketBone[self.chainId + "_stretchBone"] = stretchBoneName
         socketBone[self.chainId + "_stretchTopBone"] = stretchTopName
-        socketBone[self.chainId + "_visibleST"] = True
+        #socketBone[self.chainId + "_visibleST"] = True
         
         #ADD GENERAL BONE CUSTOM PROPERTIES
         stretchTopBone = arm.pose.bones[stretchTopName]
@@ -1716,9 +1720,9 @@ class VTOOLS_OP_RS_createIK(bpy.types.Operator):
                 fkControlBone[self.chainId + "_ikchainLenght"] = pChainLenght
                 #fkControlBone[self.chainId + "_fkStretchBone"] = "" #nbName TO REMOVE
                 fkControlBone[self.chainId + "_iktargetid"] = pIkTargetName 
-                fkControlBone[self.chainId + "_visibleFK"] = True
-                fkControlBone[self.chainId + "_visibleFR"] = True
-                fkControlBone[self.chainId + "_visibleSK"] = True
+                #fkControlBone[self.chainId + "_visibleFK"] = True
+                #fkControlBone[self.chainId + "_visibleFR"] = True
+                #fkControlBone[self.chainId + "_visibleSK"] = True
                 
          
         return newChain
@@ -1824,6 +1828,36 @@ class VTOOLS_OP_RS_rebuildChain(bpy.types.Operator):
                         c.distance = 0      
         
         return {'FINISHED'}
+
+
+class VTOOLS_OP_RS_resetArmature(bpy.types.Operator):
+    bl_idname = "vtoolsrigsystem.resetarmature"
+    bl_label = "Reset Armature"
+    bl_description = "Remove Rig System properties from armature"
+    
+    def removeCustomProp(self, pBone, pProp):
+        prop = findCustomProperty(pBone, pProp)
+        if prop != "":
+            del pBone[prop]
+                
+    def execute(self, context):
+        arm = bpy.context.active_object
+            
+        for b in arm.pose.bones:
+            
+            self.removeCustomProp(b, "chainSocket")
+            self.removeCustomProp(b, "chainId")
+            self.removeCustomProp(b, "iktargetid")
+            self.removeCustomProp(b, "fkDriver")
+            self.removeCustomProp(b, "fkchainBone")
+            self.removeCustomProp(b, "freechainBone")
+            self.removeCustomProp(b, "ikchainBone")
+            self.removeCustomProp(b, "ikchainLenght")
+            self.removeCustomProp(b, "stretchTopBone")
+            
+            
+        return {'FINISHED'}
+    
     
 class VTOOLS_OP_RS_setRotationMode(bpy.types.Operator):
     bl_idname = "vtoolsrigsystem.setrotationmode"
@@ -1972,6 +2006,7 @@ class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
             
             box.operator(VTOOLS_OP_RS_createIK.bl_idname, text="Create Chain")
             box.operator(VTOOLS_OP_RS_rebuildChain.bl_idname, text="Rebuild")
+            box.operator(VTOOLS_OP_RS_resetArmature.bl_idname, text="Reset")
 
             data = getChainSocketBone(bpy.context.active_pose_bone)
             if data != None:
@@ -2149,6 +2184,7 @@ def register_rigsystem():
     bpy.utils.register_class(VTOOLS_OP_RS_setRotationMode)
     bpy.utils.register_class(VTOOLS_OP_setChainVisibility)
     bpy.utils.register_class(VTOOLS_OP_selectChain)
+    bpy.utils.register_class(VTOOLS_OP_RS_resetArmature)
     
     
     bpy.types.Scene.fkControlObjects = bpy.props.StringProperty()
@@ -2185,6 +2221,7 @@ def unregister_rigsystem():
     bpy.utils.unregister_class(VTOOLS_OP_RS_setRotationMode)
     bpy.utils.unregister_class(VTOOLS_OP_setChainVisibility)
     bpy.utils.unregister_class(VTOOLS_OP_selectChain)
+    bpy.utils.unregister_class(VTOOLS_OP_RS_resetArmature)
     
     del bpy.types.Scene.fkControlObjects
     del bpy.types.Scene.fkFreeControlObjects
