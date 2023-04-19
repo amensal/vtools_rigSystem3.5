@@ -224,6 +224,7 @@ def createSpriteMaterial(pSpritePlane, pImage):
 
         #SET IMAGE        
         texNode.image = pImage
+        texNode.image.alpha_mode = "PREMUL"
         
         #LINKS
         mat.node_tree.links.new(texNode.outputs["Color"], shaderNode.inputs["Base Color"]) 
