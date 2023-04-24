@@ -86,6 +86,13 @@ def setAsSprite(pObjName, pTexNode):
         obj["vtsp_stepY"] = 0.5
         obj["vtsp_image"] = pTexNode.image.name
         
+        #LIBRARY OVERRIDE
+        obj.property_overridable_library_set('["vtsp_columns"]', True)
+        obj.property_overridable_library_set('["vtsp_rows"]', True)
+        obj.property_overridable_library_set('["vtsp_fps"]', True)
+        obj.property_overridable_library_set('["vtsp_stepX"]', True)
+        obj.property_overridable_library_set('["vtsp_stepY"]', True)
+        
         #CONFIGURE CUSTOM PROPERTIES   
         cpStepX = obj.id_properties_ui("vtsp_stepX")
         cpStepX.update(step = 0.01)
@@ -691,100 +698,107 @@ class VTOOLS_PT_importSprite(bpy.types.Panel):
             obj = bpy.context.object
             objName = obj.name
         
-            
+            print("Entra")
             if isSprite(obj):
                 
+                
                 texNode = findNodeByImage(obj.name, obj["vtsp_image"])
+                
+                print("is Sprite ", texNode)
+                
                 if texNode != None:
                     textureName = "VTSP_TEX_" + obj[propSpriteIDName] + "_" + texNode.image.name
-                    if bpy.data.textures.find(textureName) != -1:
+                    print("texture Name ", textureName)
+                    #if bpy.data.textures.find(textureName) != -1:
                         
-                        row = layout.row(align=True)
-                        op = row.operator(VTOOLS_OT_createSprite.bl_idname, text="Reset Sprite")
-                        op.selectedTexNode = obj["vtsp_image"]
-                        row.operator(VTOOLS_OT_deleteSprite.bl_idname, text="Delete Sprite")
+                    row = layout.row(align=True)
+                    op = row.operator(VTOOLS_OT_createSprite.bl_idname, text="Reset Sprite")
+                    op.selectedTexNode = obj["vtsp_image"]
+                    row.operator(VTOOLS_OT_deleteSprite.bl_idname, text="Delete Sprite")
+                    
+                    box1 = layout.box()
+                    box2 = layout.box()
+                    
+                    #IMAGE TUMBNAIL
+                    #tex = bpy.data.textures[textureName]
+                    #if tex != None:
                         
-                        box1 = layout.box()
-                        box2 = layout.box()
-                        tex = bpy.data.textures[textureName]
-                        if tex != None:
-                            
-                            box1.template_ID(texNode, "image")
-                            box1.operator(VTOOLS_OT_setSpriteImage.bl_idname, text="Reload Image")
-                            
-                        if tex != None:
-                            
-                            box2.template_preview(tex)
-                            
-                            col = box2.column(align=True)
-            
-                            spCol = armUtils.findCustomProperty(obj,"vtsp_columns")
-                            if spCol != "":
-                                col.prop(obj, '["vtsp_columns"]', text="Columns")
-                            
-                            spRow = armUtils.findCustomProperty(obj,"vtsp_rows")
-                            if spRow != "":
-                                col.prop(obj, '["vtsp_rows"]', text="Rows")
-                            
-                            spFPS = armUtils.findCustomProperty(obj,"vtsp_fps")
-                            if spFPS != "":
-                                col.prop(obj, '["vtsp_fps"]', text="fps")
-                            
-                            box2.operator(VTOOLS_OT_spriteAutokey.bl_idname, text="Autokey")
-                           
-                            
-                            
-                            #GET SPRITE BONE PROPERTIES
-                            spriteBone = getSpriteControlBone(objName)
-                            
-                            if spriteBone != None:
-                                box3 = layout.box()
-                                rowStep = box3.row(align=True)
-                                
-                                rowStep.prop(obj, '["vtsp_stepX"]', text="")
-                                rowStep.prop(obj, '["vtsp_stepY"]', text="")
-                                rowStep.operator(VTOOLS_OT_calculateSpriteAnimationStep.bl_idname, text="", icon ="CON_ACTION")
-                                
-                                col2 = box3.column(align=True)
-                                
-                                rowCol = col2.row(align=True)
-                                
-                                #BONE X PROPERTY
-                                spriteCell_x = "Col " + str(int(1 + spriteBone.location.x*obj["vtsp_columns"]))
-                                rowCol.prop(spriteBone, "location", index=0, text=str(spriteCell_x))
-                                
-                                #ADD X
-                                op = rowCol.operator(VTOOLS_OT_moveSpriteControlBone.bl_idname, text="", icon='ADD')
-                                op.boneName = spriteBone.name
-                                op.bonePos = "X_axi"
-                                op.action = "ADD"                   
-                                
-                                #REMOVE X
-                                op = rowCol.operator(VTOOLS_OT_moveSpriteControlBone.bl_idname, text="", icon='REMOVE')
-                                op.boneName = spriteBone.name
-                                op.bonePos = "X_axi"
-                                op.action = "REMOVE"  
-                                
-                                
-                                #BONE Z PROPERTY
-                                rowCol2 = col2.row(align=True)                   
-                                spriteCell_z = "Row " + str(int(1 + spriteBone.location.z*obj["vtsp_rows"]))
-                                rowCol2.prop(spriteBone, "location", index=2, text=spriteCell_z)
-                                
-                                #ADD Z
-                                op = rowCol2.operator(VTOOLS_OT_moveSpriteControlBone.bl_idname, text="", icon='ADD')                   
-                                op.boneName = spriteBone.name
-                                op.bonePos = "Z_axi"
-                                op.action = "ADD"
-                                
-                                #REMOVE Z
-                                op = rowCol2.operator(VTOOLS_OT_moveSpriteControlBone.bl_idname, text="", icon='REMOVE')
-                                op.boneName = spriteBone.name
-                                op.bonePos = "Z_axi"
-                                op.action = "REMOVE"
-                                
-                                box3.operator(VTOOLS_OT_selectSpriteControlBones.bl_idname, text="Select Control Bones")
-                                
+                        #box1.template_ID(texNode, "image")
+                        #box1.operator(VTOOLS_OT_setSpriteImage.bl_idname, text="Reload Image")
+                        
+                    #if tex != None:
+                        
+                    #box2.template_preview(tex)
+                    
+                    col = box2.column(align=True)
+    
+                    spCol = armUtils.findCustomProperty(obj,"vtsp_columns")
+                    if spCol != "":
+                        col.prop(obj, '["vtsp_columns"]', text="Columns")
+                    
+                    spRow = armUtils.findCustomProperty(obj,"vtsp_rows")
+                    if spRow != "":
+                        col.prop(obj, '["vtsp_rows"]', text="Rows")
+                    
+                    spFPS = armUtils.findCustomProperty(obj,"vtsp_fps")
+                    if spFPS != "":
+                        col.prop(obj, '["vtsp_fps"]', text="fps")
+                    
+                    box2.operator(VTOOLS_OT_spriteAutokey.bl_idname, text="Autokey")
+                       
+                        
+                        
+                    #GET SPRITE BONE PROPERTIES
+                    spriteBone = getSpriteControlBone(objName)
+                    print("SPRITE BONE ", spriteBone)
+                    if spriteBone != None:
+                        box3 = layout.box()
+                        rowStep = box3.row(align=True)
+                        
+                        rowStep.prop(obj, '["vtsp_stepX"]', text="")
+                        rowStep.prop(obj, '["vtsp_stepY"]', text="")
+                        rowStep.operator(VTOOLS_OT_calculateSpriteAnimationStep.bl_idname, text="", icon ="CON_ACTION")
+                        
+                        col2 = box3.column(align=True)
+                        
+                        rowCol = col2.row(align=True)
+                        
+                        #BONE X PROPERTY
+                        spriteCell_x = "Col " + str(int(1 + spriteBone.location.x*obj["vtsp_columns"]))
+                        rowCol.prop(spriteBone, "location", index=0, text=str(spriteCell_x))
+                        
+                        #ADD X
+                        op = rowCol.operator(VTOOLS_OT_moveSpriteControlBone.bl_idname, text="", icon='ADD')
+                        op.boneName = spriteBone.name
+                        op.bonePos = "X_axi"
+                        op.action = "ADD"                   
+                        
+                        #REMOVE X
+                        op = rowCol.operator(VTOOLS_OT_moveSpriteControlBone.bl_idname, text="", icon='REMOVE')
+                        op.boneName = spriteBone.name
+                        op.bonePos = "X_axi"
+                        op.action = "REMOVE"  
+                        
+                        
+                        #BONE Z PROPERTY
+                        rowCol2 = col2.row(align=True)                   
+                        spriteCell_z = "Row " + str(int(1 + spriteBone.location.z*obj["vtsp_rows"]))
+                        rowCol2.prop(spriteBone, "location", index=2, text=spriteCell_z)
+                        
+                        #ADD Z
+                        op = rowCol2.operator(VTOOLS_OT_moveSpriteControlBone.bl_idname, text="", icon='ADD')                   
+                        op.boneName = spriteBone.name
+                        op.bonePos = "Z_axi"
+                        op.action = "ADD"
+                        
+                        #REMOVE Z
+                        op = rowCol2.operator(VTOOLS_OT_moveSpriteControlBone.bl_idname, text="", icon='REMOVE')
+                        op.boneName = spriteBone.name
+                        op.bonePos = "Z_axi"
+                        op.action = "REMOVE"
+                        
+                        box3.operator(VTOOLS_OT_selectSpriteControlBones.bl_idname, text="Select Control Bones")
+                        
                                                
                     else:
                         layout.menu("VTOOLS_MT_textureImageNodes")
