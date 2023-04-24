@@ -6,17 +6,12 @@ def getFCurveTargetBone(pDataPath):
     boneName = ""
     copy = False
     
-    for c in pDataPath:
-        if copy == True and c != "]":
-            boneName += c
-            
-        if c == "[":
-            copy = True
-        elif c == "]":
-            copy = False
-            break
-    
+    boneName = pDataPath.split("[")[1]
+    boneName = boneName.split("]")[0]
     boneName = boneName.replace('"', '')
+
+
+    
     return boneName
     
 class VTOOLS_OP_RS_deleteInvalidCurves(bpy.types.Operator):
@@ -49,7 +44,7 @@ class VTOOLS_OP_RS_deleteInvalidCurves(bpy.types.Operator):
                     a.fcurves.remove(fc)
         
                 
-        if bpy.context.object.type == "ARMATURE":        
+        if bpy.context.object.type == "ARMATURE":       
             for g in a.groups:
                 finder = bpy.context.object.pose.bones.find(g.name)
                 if finder == -1:
@@ -211,13 +206,20 @@ class VTOOLS_PT_animationCurveTools(bpy.types.Panel):
         col.prop(bpy.context.scene,"vt_curveOldstr", text="Source")
         col.prop(bpy.context.scene,"vt_curveNewstr", text="New")
         
-        box.operator(VTOOLS_OP_RS_renameAnimationCurves.bl_idname, text="Rename Curves")
-        op = box.operator(VTOOLS_OP_RS_renameAnimationCurves.bl_idname, text="Rename All")
+        col = box.column(align=True)
+        col.operator(VTOOLS_OP_RS_renameAnimationCurves.bl_idname, text="Rename Curves")
+        op = col.operator(VTOOLS_OP_RS_renameAnimationCurves.bl_idname, text="Rename All")
         op.renameBone = True
-        deleteBySource = box.operator(VTOOLS_OP_RS_deleteInvalidCurves.bl_idname, text="Delete Curves By Source")
+        
+        col = box.column(align=True)
+        deleteBySource = col.operator(VTOOLS_OP_RS_deleteInvalidCurves.bl_idname, text="Delete fCurve By Source")
         deleteBySource.bySource = True
         
+        deleteBySource = col.operator(VTOOLS_OP_RS_deleteInvalidCurves.bl_idname, text="Delete Invalid fCurves")
+        deleteBySource.bySource = False
+        
         box = layout.box()
+        box.label(text="Paste Key")
         box.prop(bpy.context.scene,"vt_curveID", text="Action ID")
         box.operator(VTOOLS_OP_RS_pasteKeyToAllActions.bl_idname, text="Paste Key")
         

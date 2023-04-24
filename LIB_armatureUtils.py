@@ -255,17 +255,4 @@ def loadImagesFromFolder(pFolderPath, pImageOffset):
             
             placeCont +=1
             
-        
-    """
-    images = tuple(load_images(
-            (fn.name for fn in self.files),
-            self.directory,
-            force_reload=self.force_reload,
-            find_sequences=self.image_sequence
-        ))
-    load_image(filename, directory, check_existing=True, force_reload=force_reload)
-
-
-    
-    """
     return loadedImages 

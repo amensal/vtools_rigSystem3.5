@@ -1977,22 +1977,26 @@ class VTOOLS_PT_ikfkSetup(bpy.types.Panel):
         layout = self.layout 
         activeBone = context.active_pose_bone
         
+        #BUILDER SETTINGS 
+        
+        box = layout.box()
+        box.label(text="Display As")
+        box.prop(bpy.context.object.data, "display_type", text="")
+        box = layout.box()
+        box.label(text="Controls Custom Shapes")
+        box.prop_search(bpy.context.scene, "fkikRoot", bpy.context.object.data, "bones", text="Root")
+        box.prop_search(bpy.context.scene, "socketControlObjects", bpy.data, "objects", text="Socket Shape")
+        box.prop_search(bpy.context.scene, "fkControlObjects", bpy.data, "objects", text="FK Shape")
+        box.prop_search(bpy.context.scene, "ikControlObjects", bpy.data, "objects", text="IK Shape")
+        box.prop_search(bpy.context.scene, "fkFreeControlObjects", bpy.data, "objects", text="FK Free Shape")
+        box.prop_search(bpy.context.scene, "stretchControlObjects", bpy.data, "objects", text="Stretch Shape")
+        #box.prop_search(bpy.context.scene, "stretchControlObjects", bpy.data, "objects", text="Stretch Shape")
+        
+        
         if activeBone != None:           
             #box.prop(activeBone.ikfksolver, "ikchainLenght" , text = "Chain lenght", emboss = True)
             
-            box = layout.box()
-            box.label(text="Display As")
-            box.prop(bpy.context.object.data, "display_type", text="")
-            box = layout.box()
-            box.label(text="Controls Custom Shapes")
-            box.prop_search(bpy.context.scene, "fkikRoot", bpy.context.object.data, "bones", text="Root")
-            box.prop_search(bpy.context.scene, "socketControlObjects", bpy.data, "objects", text="Socket Shape")
-            box.prop_search(bpy.context.scene, "fkControlObjects", bpy.data, "objects", text="FK Shape")
-            box.prop_search(bpy.context.scene, "ikControlObjects", bpy.data, "objects", text="IK Shape")
-            box.prop_search(bpy.context.scene, "fkFreeControlObjects", bpy.data, "objects", text="FK Free Shape")
-            box.prop_search(bpy.context.scene, "stretchControlObjects", bpy.data, "objects", text="Stretch Shape")
-            #box.prop_search(bpy.context.scene, "stretchControlObjects", bpy.data, "objects", text="Stretch Shape")
-            
+            #BUILDER ACTIONS 
             box = layout.box()
             box.label(text="Build")
             
