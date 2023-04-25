@@ -48,7 +48,7 @@ def setChainVisibility(pSocketBoneName, pVisible, pUsedSocketList):
             for b in arm.pose.bones:
                 
                 #IS SOCKET CHAIN
-                if b.name.find("SOCKETCHAIN") != -1:
+                if b.name.find("SOCKETCHAIN") != -1 and b.name.find(pSocketBoneName) != -1:
                     b.bone.hide = not bpy.context.object.vtRigChains.socketbone
                     b.bone.select = not bpy.context.object.vtRigChains.socketbone
                                 
@@ -132,49 +132,7 @@ def selectChain(pSocketBoneName, pUsedSocketList):
         
         if lastVisibleBoneName != None:    
             arm.data.bones.active = bpy.context.object.data.bones[lastVisibleBoneName]
-            
-        """
-            #COLLECT CHAINS TO SEARCH
-            chainsToSearch = []
-            if bpy.context.object.vtRigChains.fkchain == True:
-                chainsToSearch.append("FKChain")
-            if bpy.context.object.vtRigChains.ikchain == True:
-                chainsToSearch.append("ikTarget")
-            if bpy.context.object.vtRigChains.freechain == True:
-                chainsToSearch.append("FreeChain")               
-            if bpy.context.object.vtRigChains.stretchbone == True:
-                chainsToSearch.append("STRETCHTOP")
-            
-            #IF SOCKETBONE SET SOCKET VISIBIILTY
-            if bpy.context.object.vtRigChains.socketbone == True:
-                socketBone = arm.pose.bones[socketBoneName]
-                socketBone.bone.hide = False
-                socketBone.bone.select = True 
-        
-            #RUN ALL BONES AND CHECK
-            for b in arm.pose.bones:
-                customProp = findCustomProperty(b, "chainSocket")
-                if customProp != "":
-                    if b[customProp] == socketBoneName:
-                        
-                        if b.bone.use_deform != True:
-                            #IF NOT IS DEF BONE
-                            for chain in chainsToSearch:  
-                                if b.name.find(chain) != -1:
-                                    b.bone.hide = False
-                                    b.bone.select = True
-                                    lastVisibleBoneName = b.name
-                        
-                        else:
-                            if bpy.context.object.vtRigChains.defchain == True:
-                                b.bone.hide = False
-                                b.bone.select = True
-                                lastVisibleBoneName = b.name
-                         
-            
-        arm.data.bones.active = bpy.context.object.data.bones[lastVisibleBoneName]
-        """         
-        
+              
     return socketBoneName
 
 
