@@ -19,7 +19,10 @@ class VTOOLS_PT_rigSystem(bpy.types.Panel):
     bl_category = 'Tool'
     bl_options = {'DEFAULT_CLOSED'}
     
-
+    @classmethod
+    def poll(cls, context):
+        return (context.mode == "OBJECT" or context.mode == "POSE")
+    
     def draw(self, context):
         layout = self.layout
 
@@ -27,10 +30,11 @@ class VTOOLS_PT_rigSystem(bpy.types.Panel):
 modules = ()
 classes = (VTOOLS_PT_rigSystem,)
 
-def register():
+
+
+        
     
-    for c in classes:
-        bpy.utils.register_class(c)
+def register():
     
     from .rigSystem import register_rigsystem
     register_rigsystem()
@@ -68,3 +72,12 @@ def unregister():
     for c in classes:
         bpy.utils.unregister_class(c)
 
+"""
+def register_main():
+    for c in classes:
+        bpy.utils.register_class(c)
+        
+if __name__ == "__main__":
+    register_main()
+
+"""

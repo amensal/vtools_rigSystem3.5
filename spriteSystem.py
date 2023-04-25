@@ -728,7 +728,7 @@ class VTOOLS_PT_importSprite(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return (context)
+        return (context.mode == "OBJECT" or context.mode == "POSE")
     
     def draw(self,context):
         tex = None

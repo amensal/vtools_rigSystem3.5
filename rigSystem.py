@@ -2006,8 +2006,8 @@ class VTOOLS_PT_ikfkControls(bpy.types.Panel):
     def poll(cls, context):
         ret = False
         if context.object:
-           ret =  context.object.type == "ARMATURE"
-        return ret
+           ret =  context.object.type == "ARMATURE" 
+        return ret and context.mode == "OBJECT" or context.mode == "POSE"
 
     def draw(self, context):
         
