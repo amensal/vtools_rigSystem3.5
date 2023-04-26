@@ -891,7 +891,7 @@ def register_spriteSystem():
         bpy.utils.register_class(cls)
     
     bpy.types.Object.vtRigSpritesCollection = bpy.props.CollectionProperty(type=VTOOLS_CC_vtRigSpritesCollection)
-    bpy.types.Object.vtRigSpritesCollection_ID = bpy.props.IntProperty(default = -1)
+    bpy.types.Object.vtRigSpritesCollection_ID = bpy.props.IntProperty(default = -1, override={"LIBRARY_OVERRIDABLE"})
     bpy.types.Scene.vtRig2DSpriteFolder = bpy.props.StringProperty(subtype='DIR_PATH')
 
 
