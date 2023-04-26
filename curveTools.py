@@ -195,6 +195,11 @@ class VTOOLS_PT_animationCurveTools(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = 'Tool'
     bl_options = {'DEFAULT_CLOSED'}
+    
+    @classmethod
+    def poll(cls, context):
+        ret = (context.mode == "OBJECT" or context.mode == "POSE")
+        return ret
 
     def draw(self, context):
         layout = self.layout
@@ -317,7 +322,8 @@ class VTOOLS_PT_BakingAnimation(bpy.types.Panel):
         
     @classmethod
     def poll(cls, context):
-        return (context.mode == "OBJECT" or context.mode == "POSE")
+        ret = (context.mode == "OBJECT" or context.mode == "POSE")
+        return ret
     
     def draw(self,context):
         
