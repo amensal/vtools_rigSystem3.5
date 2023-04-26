@@ -95,7 +95,7 @@ def setFCurveInterpolation(pArm, pBoneName, pInterpolationType ):
                             k.easing = 'AUTO'
                 
 
-def selectBonesByName(pObjectName, pArm, pWildCardName):
+def selectBonesByName(pArm, pWildCardName):
     
     #SELECT ARMATURE
     arm = pArm
@@ -109,12 +109,13 @@ def selectBonesByName(pObjectName, pArm, pWildCardName):
         if b.name.find(pWildCardName) != -1:
             b.select = True
             
-    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.mode_set(mode='POSE')
+    """
     #bpy.ops.object.select_all(action='DESELECT')
     arm.select_set(True)
     bpy.data.objects[pObjectName].select_set(True)
     bpy.context.view_layer.objects.active = bpy.data.objects[pObjectName]
-                
+    """            
                 
 def getSelectedObjectNames():
     

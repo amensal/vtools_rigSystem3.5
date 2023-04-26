@@ -621,17 +621,31 @@ class VTOOLS_OT_selectSpriteControlBones(bpy.types.Operator):
     bl_description = "Select visibility bones from skin armature"
     bl_options = {'REGISTER', 'PRESET', 'UNDO'}
     
+    allBones : bpy.props.BoolProperty(default=False)
+    
     def execute(self, context):
         selectedObjectNames = armUtils.getSelectedObjectNames()
+        arm = bpy.context.object
         
-        
-        for oName in selectedObjectNames:
-            obj = bpy.data.objects[oName]
-            arm = obj.parent
-            if arm != None:
-                wildCard = "spriteControl_" + obj[propSpriteIDName] 
-                armUtils.selectBonesByName(oName, arm,wildCard)
-               
+        print("select")
+        if arm.type == "ARMATURE":
+            #IF ALL BONES SELECT ALL CONTROL BONES
+            if self.allBones == True:
+                print("all bones")    
+                for bone in arm.pose.bones:
+                    wildCard = "spriteControl_"
+                    print(bone.name)
+                    if bone.name.find(wildCard) != -1:
+                        print("select")
+                        bone.bone.select = True
+            else:
+                #IF NOT ALL, SELECT ONLY SELECTED SPRITE
+                spriteItem = getSelectedSpriteItem(arm)
+                if spriteItem != None:
+                    if arm.pose.bones.find(spriteItem.spriteBoneName) != -1:
+                        arm.pose.bones[spriteItem.spriteBoneName].bone.select = True
+                        #armUtils.selectBonesByName(arm,wildCard)
+                   
         return {'FINISHED'}
 
 class VTOOLS_OT_calculateSpriteAnimationStep(bpy.types.Operator):
@@ -840,7 +854,12 @@ class VTOOLS_PT_importSprite(bpy.types.Panel):
                         op.action = "REMOVE"
                         op.targetMesh = obj.name
                         
-                        box3.operator(VTOOLS_OT_selectSpriteControlBones.bl_idname, text="Select Control Bones")
+                        box4 = layout.box()
+                        box4.label(text="Select Control Bones", icon="EYEDROPPER")
+                        row = box4.row(align=True)
+                        row.operator(VTOOLS_OT_selectSpriteControlBones.bl_idname, text="Selected")
+                        op = row.operator(VTOOLS_OT_selectSpriteControlBones.bl_idname, text="All")
+                        op.allBones = True
                     
 # ------------ UI LIST --------------------#
 
