@@ -6,7 +6,7 @@ import os
 if "LIB_armatureUtils" in locals():
     importlib.reload(LIB_armatureUtils)
 else:
-    from vtools_rigsystem import LIB_armatureUtils
+    from vtools_rigSystem import LIB_armatureUtils
     importlib.reload(LIB_armatureUtils)
 
 

@@ -2131,7 +2131,7 @@ class VTOOLS_vtChainsProps(bpy.types.PropertyGroup):
 
 #---------- REGISTER ----------#
     
-def register_rigsystem():  
+def register_rigSystem():  
     
     bpy.utils.register_class(VTOOLS_PT_ikfkSetup)
     bpy.utils.register_class(VTOOLS_PT_ikfkControls)
@@ -2168,7 +2168,7 @@ def register_rigsystem():
     bpy.types.Object.vtRigChains =  bpy.props.PointerProperty(type=VTOOLS_vtChainsProps, override={"LIBRARY_OVERRIDABLE"},) 
 
     
-def unregister_rigsystem():
+def unregister_rigSystem():
     
     bpy.utils.unregister_class(VTOOLS_PT_ikfkSetup)
     bpy.utils.unregister_class(VTOOLS_PT_ikfkControls)
@@ -2206,5 +2206,5 @@ def unregister_rigsystem():
     
 #---------- CLASES ----------#
 if __name__ == "__main__":
-    register_rigsystem()
+    register_rigSystem()
 

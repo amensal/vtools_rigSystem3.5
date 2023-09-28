@@ -38,8 +38,8 @@ def register():
     
     register_main()
     
-    from .rigSystem import register_rigsystem
-    register_rigsystem()
+    from .rigSystem import register_rigSystem
+    register_rigSystem()
     
     from .curveTools import register_curveTools
     register_curveTools()
@@ -58,8 +58,8 @@ def unregister():
     
     unregister_main()
 
-    from .rigSystem import unregister_rigsystem
-    unregister_rigsystem()
+    from .rigSystem import unregister_rigSystem
+    unregister_rigSystem()
     
     from .curveTools import unregister_curveTools
     unregister_curveTools()

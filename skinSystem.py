@@ -2,7 +2,7 @@ import bpy
 import importlib
 #armUtils = bpy.data.texts["LIB_armatureUtils"].as_module()
 
-from vtools_rigsystem import LIB_armatureUtils
+from vtools_rigSystem import LIB_armatureUtils
 if "LIB_armatureUtils" in locals():
     importlib.reload(LIB_armatureUtils)
     
