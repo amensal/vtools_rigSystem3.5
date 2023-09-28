@@ -2,3 +2,11 @@
 *.pyc
 *.pyc
 *.pyc
+*.pyc
+__pycache__/__init__.cpython-310.pyc
+__pycache__/boneTools.cpython-310.pyc
+__pycache__/curveTools.cpython-310.pyc
+__pycache__/LIB_armatureUtils.cpython-310.pyc
+__pycache__/rigSystem.cpython-310.pyc
+__pycache__/skinSystem.cpython-310.pyc
+__pycache__/spriteSystem.cpython-310.pyc
